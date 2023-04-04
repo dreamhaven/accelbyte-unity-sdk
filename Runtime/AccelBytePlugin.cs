@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2018 - 2022 AccelByte Inc. All Rights Reserved.
+﻿// Copyright (c) 2018 - 2023 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
@@ -25,13 +25,12 @@ namespace AccelByte.Api
 #endif
     public static class AccelBytePlugin
     {
-        private static OAuthConfig oAuthConfig;
-        private static Config config;
+        private static AccelByteSettingsV2 settings;
         private static CoroutineRunner coroutineRunner;
         private static IHttpClient httpClient;
-        
+
         private static GameClient gameClient;
-        
+
         #region Modules with ApiBase
         private static User user;
         private static Categories categories;
@@ -59,20 +58,26 @@ namespace AccelByte.Api
         private static Miscellaneous miscellaneous;
         private static Reward reward;
         private static SessionBrowser sessionBrowser;
+        private static Session _session;
+        private static MatchmakingV2 _matchmakingV2;
         private static TurnManager turnManager;
+        private static ServiceVersion serviceVersion;
+        private static HeartBeat heartBeat;
+        private static StoreDisplay storeDisplay;
         #endregion /Modules with ApiBase
 
         private static bool initialized = false;
         private static SettingsEnvironment activeEnvironment = SettingsEnvironment.Default;
         internal static event Action configReset;
         public static event Action<SettingsEnvironment> environmentChanged;
+        private static IHttpRequestSender defaultHttpSender = new UnityHttpRequestSender();
 
         internal static OAuthConfig OAuthConfig
         {
             get
             {
                 CheckPlugin();
-                return oAuthConfig;
+                return settings.OAuthConfig;
             }
         }
 
@@ -81,7 +86,20 @@ namespace AccelByte.Api
             get
             {
                 CheckPlugin();
-                return config;
+                return settings.SDKConfig;
+            }
+        }
+
+        internal static IHttpRequestSender DefaultHttpSender
+        {
+            get
+            {
+                return defaultHttpSender;
+            }
+            set
+            {
+                defaultHttpSender = value;
+                UpdateHttpClientSender(defaultHttpSender);
             }
         }
 
@@ -92,46 +110,108 @@ namespace AccelByte.Api
             {
                 if (state == PlayModeStateChange.ExitingEditMode)
                 {
-                    initialized = false;
-
-                    ResetApis();
+                    Reset();
                 }
             };
 #endif
         }
 
-        internal static void Initialize(Config inConfig = null, OAuthConfig inOAuthConfig = null)
+        internal static void Reset()
+        {
+            initialized = false;
+
+            ResetApis();
+
+            if(heartBeat != null)
+            {
+                heartBeat.SetHeartBeatEnabled(false);
+                heartBeat = null;
+            }
+        }
+
+        internal static void Initialize()
+        {
+            Initialize(null, null);
+
+            ValidateCompatibility();
+        }
+
+        internal static void Initialize(Config inConfig, OAuthConfig inOAuthConfig)
         {
             ResetApis();
-            initialized = true;
-            string activePlatform = GetActivePlatform();
 
-            if ( inConfig == null && inOAuthConfig == null)
+            AccelByteSettingsV2 newSettings;
+            if (inConfig == null && inOAuthConfig == null)
             {
-                RetrieveConfigFromJsonFile(activePlatform);
-                if (oAuthConfig.IsRequiredFieldEmpty())
+                string activePlatform = AccelByteSettingsV2.GetActivePlatform(false);
+                newSettings = RetrieveConfigFromJsonFile(activePlatform, activeEnvironment);
+                if (newSettings.SDKConfig.IsRequiredFieldEmpty())
                 {
-                    RetrieveConfigFromJsonFile();
+                    newSettings = RetrieveConfigFromJsonFile("", activeEnvironment);
                 }
             }
             else
             {
-                config = inConfig;
-                oAuthConfig = inOAuthConfig;
+                newSettings = new AccelByteSettingsV2(inOAuthConfig, inConfig);
             }
 
-            oAuthConfig.CheckRequiredField();
-            oAuthConfig.Expand();
-            config.CheckRequiredField();
-            config.Expand();
+            newSettings.OAuthConfig.CheckRequiredField();
+            newSettings.SDKConfig.CheckRequiredField();
+
+            settings = newSettings;
 
             coroutineRunner = new CoroutineRunner();
 
-            InitHttpClient();
-            InitGameClient();
-            InitUser();
+            AccelByteDebug.SetEnableLogging(settings.SDKConfig.EnableDebugLog);
+            AccelByteLogType logTypeEnum;
+            if (Enum.TryParse(settings.SDKConfig.DebugLogFilter, out logTypeEnum))
+            {
+                AccelByteDebug.SetFilterLogType(logTypeEnum);
+            }
+            else
+            {
+                AccelByteDebug.SetFilterLogType(AccelByteLogType.Verbose);
+            }
 
+            httpClient = CreateHttpClient(settings.OAuthConfig, settings.SDKConfig);
+            gameClient = CreateGameClient(settings.OAuthConfig, settings.SDKConfig, httpClient);
+            user = CreateUser(settings.SDKConfig, coroutineRunner, httpClient);
+
+            HttpRequestBuilder.SetNamespace(settings.SDKConfig.Namespace);
+            HttpRequestBuilder.SetGameClientVersion(Application.version);
+            HttpRequestBuilder.SetSdkVersion(AccelByteSettingsV2.AccelByteSDKVersion);
             ServicePointManager.ServerCertificateValidationCallback = OnCertificateValidated;
+
+            initialized = true;
+        }
+
+        public static ServiceVersion GetServiceVersion()
+        {
+            if (serviceVersion == null)
+            {
+                CheckPlugin();
+                UserSession session = GetUser().Session;
+                serviceVersion = new ServiceVersion(
+                    new ServiceVersionApi(
+                        httpClient,
+                        Config, // baseUrl==justBaseUrl
+                        session),
+                    coroutineRunner);
+            }
+
+            return serviceVersion;
+        }
+
+        static bool ValidateCompatibility()
+        {
+            string matrixJsonText = Utils.AccelByteFileUtils.ReadTextFileFromResource(AccelByteSettingsV2.ServiceCompatibilityResourcePath());
+            var result = Utils.ServiceVersionUtils.CheckServicesCompatibility(GetServiceVersion(), new AccelByteServiceVersion(matrixJsonText));
+            return result;
+        }
+
+        public static Version GetPluginVersion()
+        {
+            return new Version(AccelByteSettingsV2.AccelByteSDKVersion);
         }
 
         /// <summary>
@@ -175,85 +255,53 @@ namespace AccelByte.Api
             return isOk;
         }
 
-        private static void RetrieveConfigFromJsonFile(string platform = "")
+        private static AccelByteSettingsV2 RetrieveConfigFromJsonFile(string platform, SettingsEnvironment environment)
         {
-            var oAuthFile = Resources.Load("AccelByteSDKOAuthConfig" + platform);
-            var configFile = Resources.Load("AccelByteSDKConfig");
+            var retval = new AccelByteSettingsV2(platform, environment, false);
+            return retval;
+        }
 
-            if (oAuthFile == null)
-            {
-                oAuthFile = Resources.Load("AccelByteSDKOAuthConfig");
-                if (oAuthFile == null)
-                {
-                    throw new Exception("'AccelByteSDKOAuthConfig.json' isn't found in the Project/Assets/Resources directory");
-                }
-            }
+        private static AccelByteHttpClient CreateHttpClient(OAuthConfig newOAuthConfig, Config newSdkConfig)
+        {
+            var newHttpClient = new AccelByteHttpClient(DefaultHttpSender);
+            var cacheImplementation = new AccelByteLRUMemoryCacheImplementation<AccelByteCacheItem<AccelByteHttpCacheData>>(newSdkConfig.MaximumCacheSize);
+            newHttpClient.SetCacheImplementation(cacheImplementation, newSdkConfig.MaximumCacheLifeTime);
+            newHttpClient.SetCredentials(newOAuthConfig.ClientId, newOAuthConfig.ClientSecret);
+            newHttpClient.SetBaseUri(new Uri(newSdkConfig.BaseUrl));
+            return newHttpClient;
+        }
 
-            if (configFile == null)
+        private static void UpdateHttpClientSender(IHttpRequestSender newSender)
+        {
+            if (httpClient != null && httpClient is AccelByteHttpClient)
             {
-                throw new Exception("'AccelByteSDKConfig.json' isn't found in the Project/Assets/Resources directory");
-            }
-
-            string wholeOAuthJsonText = ((TextAsset)oAuthFile).text;
-            string wholeJsonText = ((TextAsset)configFile).text;
-
-            MultiOAuthConfigs multiOAuthConfigs = wholeOAuthJsonText.ToObject<MultiOAuthConfigs>();    
-            MultiConfigs multiConfigs = wholeJsonText.ToObject<MultiConfigs>();
-            if(multiOAuthConfigs == null)
-            {
-                multiOAuthConfigs = new MultiOAuthConfigs();
-            }
-            if(multiConfigs == null)
-            {
-                multiConfigs = new MultiConfigs();
-            }
-            multiOAuthConfigs.Expand();
-            multiConfigs.Expand();
-      
-            switch (activeEnvironment)
-            {
-                case SettingsEnvironment.Development:
-                    AccelBytePlugin.oAuthConfig = multiOAuthConfigs.Development;
-                    AccelBytePlugin.config = multiConfigs.Development; break;
-                case SettingsEnvironment.Certification:
-                    AccelBytePlugin.oAuthConfig = multiOAuthConfigs.Certification;
-                    AccelBytePlugin.config = multiConfigs.Certification; break;
-                case SettingsEnvironment.Production:
-                    AccelBytePlugin.oAuthConfig = multiOAuthConfigs.Production;
-                    AccelBytePlugin.config = multiConfigs.Production; break;
-                case SettingsEnvironment.Default:
-                default:
-                    AccelBytePlugin.oAuthConfig = multiOAuthConfigs.Default;
-                    AccelBytePlugin.config = multiConfigs.Default; break;
+                (httpClient as AccelByteHttpClient).SetSender(newSender);
             }
         }
 
-        private static void InitHttpClient()
+        private static GameClient CreateGameClient(OAuthConfig newOAuthConfig, Config newSdkConfig, IHttpClient httpClient)
         {
-            httpClient = new AccelByteHttpClient();
-            httpClient.SetCredentials(oAuthConfig.ClientId, oAuthConfig.ClientSecret);
-            httpClient.SetBaseUri(new Uri(config.BaseUrl));
+            var newGameClient = new GameClient(newOAuthConfig, newSdkConfig, httpClient);
+            return newGameClient;
         }
 
-        private static void InitGameClient()
-        {
-            gameClient = new GameClient(oAuthConfig, config, httpClient);
-        }
-
-        private static void InitUser()
+        private static User CreateUser(Config newSdkConfig, CoroutineRunner taskRunner, IHttpClient httpClient)
         {
             var userSession = new UserSession(
                 httpClient,
-                coroutineRunner,
-                config.UsePlayerPrefs);
+                taskRunner,
+                newSdkConfig.PublisherNamespace,
+                newSdkConfig.UsePlayerPrefs);
 
-            user = new User(
+            var newUser = new User(
                 new UserApi(
                     httpClient,
-                    Config,
+                    newSdkConfig,
                     userSession),
                 userSession,
-                coroutineRunner);
+                taskRunner);
+
+            return newUser;
         }
 
         public static User GetUser()
@@ -500,6 +548,66 @@ namespace AccelByte.Api
             }
 
             return lobby;
+        }
+        
+        public static Session GetSession()
+        {
+            if (_session == null)
+            {
+                CheckPlugin();
+                ISession session = GetUser().Session;
+                _session = new Session(
+                    new SessionApi(
+                        httpClient, 
+                        Config, // baseUrl==SessionServerUrl
+                        session),
+                    session,
+                    coroutineRunner);
+
+                configReset += () =>
+                {
+                    _session = null;
+                    _session = new Session(
+                        new SessionApi(
+                            httpClient,
+                            Config, // baseUrl==SessionServerUrl
+                            session),
+                        session,
+                        coroutineRunner);
+                };
+            }
+
+            return _session;
+        }
+        
+        public static MatchmakingV2 GetMatchmaking()
+        {
+            if (_matchmakingV2 == null)
+            {
+                CheckPlugin();
+                ISession session = GetUser().Session;
+                _matchmakingV2 = new MatchmakingV2(
+                    new MatchmakingV2Api(
+                        httpClient, 
+                        Config, // baseUrl==MatchmakingV2ServerUrl
+                        session),
+                    session,
+                    coroutineRunner);
+
+                configReset += () =>
+                {
+                    _matchmakingV2 = null;
+                    _matchmakingV2 = new MatchmakingV2(
+                        new MatchmakingV2Api(
+                            httpClient,
+                            Config, // baseUrl==MatchmakingV2ServerUrl
+                            session),
+                        session,
+                        coroutineRunner);
+                };
+            }
+
+            return _matchmakingV2;
         }
 
         public static CloudStorage GetCloudStorage()
@@ -1013,7 +1121,72 @@ namespace AccelByte.Api
 
             return miscellaneous;
         }
-        
+        public static HeartBeat GetHeartBeat()
+        {
+            if (heartBeat == null)
+            {
+                CheckPlugin();
+                UserSession session = GetUser().Session;
+                heartBeat = new HeartBeat(
+                    new HeartBeatApi(
+                        httpClient,
+                        Config,
+                        session));
+                ProvideHeartbeatData(heartBeat);
+
+                configReset += () =>
+                {
+                    bool isHeartBeatJobEnabled = false;
+                    if(heartBeat != null)
+                    {
+                        isHeartBeatJobEnabled = heartBeat.IsHeartBeatJobEnabled;
+                        heartBeat.SetHeartBeatEnabled(false);
+                    }
+                    heartBeat = null;
+                    heartBeat = new HeartBeat(
+                        new HeartBeatApi(
+                            httpClient,
+                            Config,
+                            session));
+                    ProvideHeartbeatData(heartBeat);
+                    if(isHeartBeatJobEnabled)
+                    {
+                        heartBeat.SetHeartBeatEnabled(true);
+                    }
+                };
+            }
+
+            return heartBeat;
+        }
+
+        private static void ProvideHeartbeatData(HeartBeat targetHeartbeat)
+        {
+            string publisherNamespace = Config.PublisherNamespace;
+            string customerName = !string.IsNullOrEmpty(Config.CustomerName) ? Config.CustomerName : Config.PublisherNamespace;
+            string gameName = Config.Namespace;
+
+            SettingsEnvironment env = GetEnvironment();
+            string envString = string.Empty;
+            switch (env)
+            {
+                case SettingsEnvironment.Development:
+                    envString = "dev";
+                    break;
+                case SettingsEnvironment.Certification:
+                    envString = "cert";
+                    break;
+                case SettingsEnvironment.Production:
+                    envString = "prod";
+                    break;
+                case SettingsEnvironment.Default:
+                    envString = "default";
+                    break;
+            }
+            targetHeartbeat.AddSendData(HeartBeat.CustomerNameKey, customerName);
+            targetHeartbeat.AddSendData(HeartBeat.PublisherNamespaceKey, publisherNamespace);
+            targetHeartbeat.AddSendData(HeartBeat.EnvironmentKey, envString);
+            targetHeartbeat.AddSendData(HeartBeat.GameNameKey, gameName);
+        }
         public static void ConfigureHttpApi<T>(params object[] args) where T : HttpApiBase
         {
             CheckPlugin();
@@ -1056,27 +1229,42 @@ namespace AccelByte.Api
         {
             CheckPlugin();
             activeEnvironment = environment;
-            string activePlatform = GetActivePlatform();
-            RetrieveConfigFromJsonFile(activePlatform);
-            if (config.IsRequiredFieldEmpty())
+            string activePlatform = AccelByteSettingsV2.GetActivePlatform(false);
+            var newSettings = RetrieveConfigFromJsonFile(activePlatform, activeEnvironment);
+            if (settings.SDKConfig.IsRequiredFieldEmpty())
             {
                 activeEnvironment = SettingsEnvironment.Default;
-                RetrieveConfigFromJsonFile(activePlatform);
+                newSettings = RetrieveConfigFromJsonFile(activePlatform, activeEnvironment);
             }
-            if (oAuthConfig.IsRequiredFieldEmpty())
+            if (settings.OAuthConfig.IsRequiredFieldEmpty())
             {
-                RetrieveConfigFromJsonFile();
+                newSettings = RetrieveConfigFromJsonFile("", activeEnvironment);
             }
-            oAuthConfig.Expand();
-            config.Expand();
+            settings = newSettings;
+
+            AccelByteDebug.SetEnableLogging(settings.SDKConfig.EnableDebugLog);
+            AccelByteLogType logTypeEnum;
+            if (Enum.TryParse(settings.SDKConfig.DebugLogFilter, out logTypeEnum))
+            {
+                AccelByteDebug.SetFilterLogType(logTypeEnum);
+            }
+            else
+            {
+                AccelByteDebug.SetFilterLogType(AccelByteLogType.Verbose);
+            }
+
             httpClient = null;
             user = null;
             gameClient = null;
-            InitHttpClient();
-            InitGameClient();
-            InitUser();
-            if (configReset != null) { configReset.Invoke(); }
-            if (environmentChanged != null){ environmentChanged.Invoke(activeEnvironment); }
+
+            httpClient = CreateHttpClient(settings.OAuthConfig, settings.SDKConfig);
+            gameClient = CreateGameClient(settings.OAuthConfig, settings.SDKConfig, httpClient);
+            user = CreateUser(settings.SDKConfig, coroutineRunner, httpClient);
+
+            HttpRequestBuilder.SetNamespace(settings.SDKConfig.Namespace);
+
+            configReset?.Invoke();
+            environmentChanged?.Invoke(activeEnvironment);
         }
 
         public static SettingsEnvironment GetEnvironment()
@@ -1090,52 +1278,34 @@ namespace AccelByte.Api
             CheckPlugin();
             environmentChanged = null;
         }
-
-        internal static string GetActivePlatform()
+        public static StoreDisplay GetStoreDisplay()
         {
-            string activePlatform;
-            switch (Application.platform)
+            if (storeDisplay == null)
             {
-                case RuntimePlatform.WindowsEditor:
-                case RuntimePlatform.LinuxPlayer:
-                    if (Resources.Load("AccelByteSDKOAuthConfig" + PlatformType.Steam.ToString()) != null)
-                    {
-                        activePlatform = PlatformType.Steam.ToString();
-                    }
-                    else if (Resources.Load("AccelByteSDKOAuthConfig" + PlatformType.EpicGames.ToString()) != null)
-                    {
-                        activePlatform = PlatformType.EpicGames.ToString();
-                    }
-                    else
-                    {
-                        activePlatform = "";
-                    }
-                    break;
-                case RuntimePlatform.OSXPlayer:
-                    activePlatform = PlatformType.Apple.ToString(); break;
-                case RuntimePlatform.IPhonePlayer:
-                    activePlatform = PlatformType.iOS.ToString(); break;
-                case RuntimePlatform.Android:
-                    activePlatform = PlatformType.Android.ToString(); break;
-                case RuntimePlatform.PS4:
-                    activePlatform = PlatformType.PS4.ToString(); break;
-#if UNITY_2020_2_OR_NEWER
-                case RuntimePlatform.PS5:
-                    activePlatform = PlatformType.PS5.ToString(); break;
-#endif
-                case RuntimePlatform.XBOX360:
-                case RuntimePlatform.XboxOne:
-                    activePlatform = PlatformType.Live.ToString(); break;
-                case RuntimePlatform.Switch:
-                    activePlatform = PlatformType.Nintendo.ToString(); break;
-#if UNITY_2019_3_OR_NEWER
-                case RuntimePlatform.Stadia:
-                    activePlatform = PlatformType.Stadia.ToString(); break;
-#endif
-                default:
-                    activePlatform = ""; break;
+                CheckPlugin();
+                UserSession session = GetUser().Session;
+                storeDisplay = new StoreDisplay(
+                    new StoreDisplayApi(
+                        httpClient,
+                        Config,
+                        session),
+                    session,
+                    coroutineRunner);
+
+                configReset += () =>
+                {
+                    storeDisplay = null;
+                    storeDisplay = new StoreDisplay(
+                        new StoreDisplayApi(
+                            httpClient,
+                            Config,
+                            session),
+                        session,
+                        coroutineRunner);
+                };
             }
-            return activePlatform;
+
+            return storeDisplay;
         }
     }
 }

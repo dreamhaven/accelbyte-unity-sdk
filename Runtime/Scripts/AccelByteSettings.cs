@@ -6,6 +6,10 @@ using System.Text;
 using AccelByte.Core;
 using AccelByte.Models;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor.Compilation;
+using UnityEditor;
+#endif
 
 using Newtonsoft.Json;
 
@@ -219,6 +223,9 @@ namespace AccelByte.Api
         private SettingsEnvironment editedEnvironment = SettingsEnvironment.Default;
         private string editedPlatform = "";
 
+        private const string AccelByteSDKVersionFilename = "AccelByteSDKVersion";
+        public string AccelByteSDKVersion { get; private set; } = "";
+
         private static AccelByteSettings instance;
 
         public static AccelByteSettings Instance
@@ -251,8 +258,8 @@ namespace AccelByte.Api
 #endif
                     }
 
-                    Debug.Log("AccelByteSettings loaded");
                     AccelByteSettings.instance.Load();
+                    AccelByteDebug.Log("AccelByteSettings loaded");
                 }
 
                 return AccelByteSettings.instance;
@@ -260,12 +267,32 @@ namespace AccelByte.Api
             set { AccelByteSettings.instance = value; }
         }
 
-        public OAuthConfig CopyOAuthConfig() { return this.oAuthConfig.ShallowCopy(); }
-        public Config CopyConfig() { return this.config.ShallowCopy(); }
+        public OAuthConfig CopyOAuthConfig() 
+        { 
+            return oAuthConfig != null ? oAuthConfig.ShallowCopy() : null; 
+        }
+        public Config CopyConfig() 
+        {
+            return config != null ? config.ShallowCopy() : null;
+        }
         public void UpdateOAuthConfig(OAuthConfig newConfig) { this.oAuthConfig = newConfig; }
         public void UpdateConfig(Config newConfig) { this.config = newConfig; }
-        public bool CompareOAuthConfig(OAuthConfig newConfig) { return this.oAuthConfig.Compare(newConfig); }
-        public bool CompareConfig(Config newConfig) { return this.config.Compare(newConfig); }
+        public bool CompareOAuthConfig(OAuthConfig newConfig) 
+        { 
+            if(newConfig == null || oAuthConfig == null)
+            {
+                return false;
+            }
+            return this.oAuthConfig.Compare(newConfig); 
+        }
+        public bool CompareConfig(Config newConfig)
+        {
+            if (newConfig == null || config == null)
+            {
+                return false;
+            }
+            return this.config.Compare(newConfig); 
+        }
         public SettingsEnvironment GetEditedEnvironment() { return this.editedEnvironment; }
         public void SetEditedEnvironment(SettingsEnvironment environment) 
         { 
@@ -279,36 +306,23 @@ namespace AccelByte.Api
         }
 
         /// <summary>
-        ///  Load configuration from AccelByteSDKConfig.json
+        ///  Load configuration from Resource directory
         /// </summary>
         public void Load()
         {
-            var oAuthFile = Resources.Load("AccelByteSDKOAuthConfig" + editedPlatform);
-            var configFile = Resources.Load("AccelByteSDKConfig");
+            this.multiOAuthConfigs = AccelByteSettingsV2.LoadOAuthFile(editedPlatform);
+            this.multiConfigs = AccelByteSettingsV2.LoadSDKConfigFile();
+            this.AccelByteSDKVersion = AccelByteSettingsV2.LoadVersionFile();
 
-            if (oAuthFile != null)
-            {
-                string wholeOAuthJsonText = ((TextAsset)oAuthFile).text;
-                this.multiOAuthConfigs = wholeOAuthJsonText.ToObject<MultiOAuthConfigs>();
-            }
-
-            if (configFile != null)
-            {
-                string wholeJsonText = ((TextAsset) configFile).text;
-                this.multiConfigs = wholeJsonText.ToObject<MultiConfigs>();
-            }
-
-            if (this.multiOAuthConfigs == null || oAuthFile == null)
+            if (this.multiOAuthConfigs == null)
             {
                 this.multiOAuthConfigs = new MultiOAuthConfigs();
             }
-            this.multiOAuthConfigs.Expand();
 
             if (this.multiConfigs == null)
             {
                 this.multiConfigs = new MultiConfigs();
             }
-            this.multiConfigs.Expand();
 
             switch (editedEnvironment)
             {
@@ -326,9 +340,6 @@ namespace AccelByte.Api
                     this.oAuthConfig = multiOAuthConfigs.Default;
                     this.config = multiConfigs.Default; break;
             }
-
-            this.oAuthConfig.Expand();
-            this.config.Expand();
         }
 
         /// <summary>
@@ -336,20 +347,15 @@ namespace AccelByte.Api
         /// </summary>
         public void Save()
         {
-            // Only in the editor should we save it to disk
-            string properPath = System.IO.Path.Combine(Application.dataPath, "Resources");
-
-            if (!System.IO.Directory.Exists(properPath))
+#if UNITY_EDITOR
+            var configDir = AccelByteSettingsV2.GeneratedConfigsDirectoryFullPath();
+            if (!System.IO.Directory.Exists(configDir))
             {
-                #if UNITY_EDITOR 
-                UnityEditor.AssetDatabase.CreateFolder("Assets", "Resources");
-                #endif
+                System.IO.Directory.CreateDirectory(configDir);
             }
 
-            string oAuthFullpath =
-                System.IO.Path.Combine(System.IO.Path.Combine("Assets", "Resources"), "AccelByteSDKOAuthConfig"+editedPlatform+".json");
-            string fullPath =
-                System.IO.Path.Combine(System.IO.Path.Combine("Assets", "Resources"), "AccelByteSDKConfig.json");
+            string oAuthFullpath = AccelByteSettingsV2.OAuthFullPath(editedPlatform, false);
+            string fullPath = AccelByteSettingsV2.SDKConfigFullPath(false);
 
             switch (editedEnvironment)
             {
@@ -370,6 +376,7 @@ namespace AccelByte.Api
 
             System.IO.File.WriteAllBytes(oAuthFullpath, Encoding.ASCII.GetBytes(this.multiOAuthConfigs.ToJsonString(Formatting.Indented)));
             System.IO.File.WriteAllBytes(fullPath, Encoding.ASCII.GetBytes(this.multiConfigs.ToJsonString(Formatting.Indented)));
+#endif
         }
     }
 }

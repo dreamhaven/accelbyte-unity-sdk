@@ -169,5 +169,46 @@ namespace AccelByte.Server
                     fulfillmentRequest,
                     callback));
         }
+        
+        /// <summary>
+        /// Get List All Store.
+        /// </summary>
+        /// <param name="callback">Returns Store info via callback when completed.</param>
+        public void GetStoreList( 
+            ResultCallback<PlatformStore[]> callback )
+        {
+            Report.GetFunctionLog(GetType().Name);
+
+            if (!session.IsValid())
+            {
+                callback.TryError(ErrorCode.IsNotLoggedIn);
+                return;
+            }
+
+            coroutineRunner.Run(
+                api.GetStoreList(callback));
+        }
+        
+        /// <summary>
+        /// Get Items by criteria. Set ItemCriteria fields as null if you don't want to specify the criteria. The result
+        /// callback will returns a ItemPagingSlicedResult that contains Items within it.
+        /// </summary>
+        /// <param name="criteria">Criteria to search items</param>
+        /// <param name="callback">Returns a Result that contains ItemPagingSlicedResult via callback when completed.</param>
+        public void QueryItemsByCriteria( ItemCriteriaV2 criteria
+            , ResultCallback<ItemPagingSlicedResultV2> callback )
+        {
+            Report.GetFunctionLog(GetType().Name);
+            Assert.IsNotNull(criteria, "Can't get items by criteria; Criteria parameter is null!");
+
+            if (!session.IsValid())
+            {
+                callback.TryError(ErrorCode.IsNotLoggedIn);
+                return;
+            }
+
+            coroutineRunner.Run(
+                api.QueryItemsByCriteria(criteria, callback));
+        }
     }
 }

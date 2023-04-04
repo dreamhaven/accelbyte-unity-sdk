@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Copyright (c) 2023 AccelByte Inc. All Rights Reserved.
+// This is licensed software from AccelByte Inc, for limitations
+// and restrictions contact your company contract manager.
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -33,6 +37,12 @@ namespace AccelByte.Api
         public event OnErrorHandler OnError;
 
         #endregion public events declaration
+        
+        #region public delegate declaration
+
+        public delegate T NotificationPayloadModifier<T>(T payload) where T : class, new();
+        
+        #endregion
 
         #region private fields declaration
 
@@ -50,6 +60,8 @@ namespace AccelByte.Api
         private AccelByteWebSocket webSocket;
         private LobbySessionId lobbySessionId;
 
+        private const string LOBBY_SESSION_ID_HEADER_NAME = "X-Ab-LobbySessionID";
+        
         #endregion private fields declaration
 
         #region public properties
@@ -93,7 +105,7 @@ namespace AccelByte.Api
                 webSocket.OnError -= HandleOnError;
             }
             
-            webSocket = new AccelByteWebSocket(inWebSocket, coroutineRunner);
+            webSocket = new AccelByteWebSocket(inWebSocket);
             webSocket.OnOpen += HandleOnOpen;
             webSocket.OnMessage += HandleOnMessage;
             webSocket.OnClose += HandleOnClose;
@@ -107,7 +119,12 @@ namespace AccelByte.Api
         /// </summary>
         public void SetSessionId(string lobbySessionID)
         {
-            webSocket?.SetSessionId(lobbySessionID);
+            if(webSocket == null)
+            {
+                return;
+            }
+
+            webSocket.CustomHeaders[LOBBY_SESSION_ID_HEADER_NAME] = lobbySessionID;
         }
 
         /// <summary>
@@ -287,7 +304,7 @@ namespace AccelByte.Api
             webSocket.Send(writer.ToString());
         }
 
-        public void HandleNotification<T>(string message, ResultCallback<T> handler) where T : class, new()
+        public void HandleNotification<T>(string message, ResultCallback<T> handler, NotificationPayloadModifier<T> modifier = null) where T : class, new()
         {
             Report.GetWebSocketNotification(message);
 
@@ -298,6 +315,10 @@ namespace AccelByte.Api
 
             T payload;
             ErrorCode errorCode = AwesomeFormat.ReadPayload(message, out payload);
+            if (modifier != null)
+            {
+                payload = modifier(payload);
+            }
 
             if (errorCode != ErrorCode.None)
             {
@@ -307,6 +328,24 @@ namespace AccelByte.Api
             {
                 coroutineRunner.Run( ()=>handler(Result<T>.CreateOk(payload)));
             }
+        }
+        
+        public void HandleUserStatusNotif(string message, ResultCallback<FriendsStatusNotif> handler)
+        {
+            HandleNotification(message, handler, payload =>
+            {
+                payload.activity = Uri.UnescapeDataString(payload.activity);
+                
+                return payload;
+            });
+        }
+        
+        public void DispatchNotification<T>(T notification, ResultCallback<T> handler)
+            where T : class, new()
+        {
+            if (handler == null) return;
+
+            coroutineRunner.Run(() => handler(Result<T>.CreateOk(notification)));
         }
 
         public void HandleResponse(long messageId, string message, ErrorCode errorCode)
@@ -511,6 +550,20 @@ namespace AccelByte.Api
                 new PartyPromoteLeaderRequest { newLeaderUserId = userId }, callback);
         }
 
+        /// <summary>
+        /// Send notification to party member 
+        /// </summary>
+        /// <param name="topic">Topic The topic of the request. Can use this as ID to know how to marshal the payload</param>
+        /// <param name="payload">Payload The Payload of the request. Can be JSON string</param>
+        /// <param name="callback">
+        /// Returns a Result that contains PartySendNotifResponse via callback when completed.
+        /// </param>
+        public void SendNotificationToPartyMember(string topic, string payload, ResultCallback<PartySendNotifResponse> callback)
+        {
+            SendRequest(MessageType.partySendNotifRequest, 
+                new PartySendNotifRequest { topic = topic, payload = payload}, callback);
+        }
+
         #endregion Party
 
         #region Chat
@@ -616,7 +669,23 @@ namespace AccelByte.Api
         /// </param>
         public void ListFriendsStatus( ResultCallback<FriendsStatus> callback )
         {
-            SendRequest(MessageType.friendsStatusRequest, callback);
+            SendRequest(MessageType.friendsStatusRequest, 
+                (Result<FriendsStatus> result) =>
+                {
+                    if (result.IsError)
+                    {
+                        callback(result);
+                        return;
+                    }
+
+                    int activityLength = result.Value.activity.Length;
+                    for (int i = 0; i < activityLength; i++)
+                    {
+                        result.Value.activity[i] = Uri.UnescapeDataString(result.Value.activity[i]);
+                    }
+
+                    callback(result);
+                });
         }
         #endregion StatusAndPresence
 
@@ -757,9 +826,9 @@ namespace AccelByte.Api
         /// <summary>
         /// Send matchmaking start request.
         /// </summary>
-        /// <param name="gameMode"></param>
-        /// <param name="callback"></param>
-        /// <param name="param"></param>
+        /// <param name="gameMode">game mode to use</param>
+        /// <param name="param">optional matchmaking parameter</param>
+        /// <param name="callback">Returns a Result via callback when completed</param>
         public void StartMatchmaking( string gameMode
             , MatchmakingOptionalParam param
             , ResultCallback<MatchmakingCode> callback )
@@ -823,13 +892,24 @@ namespace AccelByte.Api
         /// <summary>
         /// Send a message to matchmaking service to indicate the user is ready for match
         /// </summary>
-        /// <param name="matchId"></param>
-        /// <param name="callback"></param>
+        /// <param name="matchId">match Id that was found</param>
+        /// <param name="callback">Returns a Result via callback when completed</param>
         public void ConfirmReadyForMatch( string matchId
             , ResultCallback callback )
         {
             SendRequest(MessageType.setReadyConsentRequest, 
                 new ReadyConsentRequest { matchId = matchId }, callback);
+        }
+
+        /// <summary>
+        /// Reject match that was found.
+        /// </summary>
+        /// <param name="matchId">match Id we want to reject.</param>
+        /// <param name="callback">Returns a Result via callback when completed.</param>
+        public void RejectMatch(string matchId, ResultCallback callback)
+        {
+            SendRequest(MessageType.setRejectConsentRequest,
+                new ReadyConsentRequest {matchId = matchId}, callback);
         }
 
         /// <summary>

@@ -41,6 +41,15 @@ namespace AccelByte.Server
         }
 
         /// <summary>
+        /// Get the registered server name.
+        /// will be filled after server is registered.
+        /// </summary>
+        public string ServerName
+        {
+            get { return serverName; }
+        }
+
+        /// <summary>
         /// Register server to DSM and mark this machine as ready
         /// </summary>
         /// <param name="port">Exposed port number to connect to</param>
@@ -71,7 +80,7 @@ namespace AccelByte.Server
         }
 
         /// <summary>
-        /// Register server ready to DSM
+        /// Shutdown cloud server
         /// </summary>
         /// <param name="killMe">Signaling DSM to forcefully shutdown this machine</param>
         /// <param name="callback">Returns a Result via callback when completed</param>
@@ -143,6 +152,8 @@ namespace AccelByte.Server
             , ResultCallback callback )
         {
             Report.GetFunctionLog(GetType().Name);
+
+            serverName = inName;
 
             coroutineRunner.Run(api.RegisterLocalServer(port, inName, callback));
         }

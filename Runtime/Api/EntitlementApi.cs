@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using AccelByte.Core;
 using AccelByte.Models;
 using UnityEngine.Assertions;
@@ -282,7 +283,8 @@ namespace AccelByte.Api
             , string entitlementId
             , int useCount
             , ResultCallback<EntitlementInfo> callback
-            , string[] options )
+            , string[] options
+            , string requestId)
         {
             Report.GetFunctionLog(GetType().Name);
             Assert.IsNotNull(Namespace_, "Can't consume user entitlement! Namespace_ from parent  is null!");
@@ -293,8 +295,8 @@ namespace AccelByte.Api
             ConsumeUserEntitlementRequest consumeUserEntitlement = new ConsumeUserEntitlementRequest
             {
                 useCount = useCount,
-                options = options
-
+                options = options,
+                requestId = requestId
             };
 
             var request = HttpRequestBuilder
@@ -539,6 +541,10 @@ namespace AccelByte.Api
             Assert.IsNotNull(Namespace_, "Can't sync DLC item! Namespace_ from parent  is null!");
             Assert.IsNotNull(AuthToken, "Can't sync DLC item! AccessToken from parent is null!");
             Assert.IsNotNull(userId, "Can't sync DLC item! UserId parameter is null!");
+            
+            var body = new Dictionary<string, string>();
+            body.Add("steamId", userSteamId);
+            body.Add("appId", userAppId);
 
             var request = HttpRequestBuilder
                 .CreatePut(BaseUrl + "/public/namespaces/{namespace}/users/{userId}/dlc/steam/sync")
@@ -546,7 +552,7 @@ namespace AccelByte.Api
                 .WithPathParam("userId", userId)
                 .WithBearerAuth(AuthToken)
                 .WithContentType(MediaType.ApplicationJson)
-                .WithBody(string.Format("{\"steamId\": \"{0}\", \"appId\": \"{1}\"}", userSteamId, userAppId))
+                .WithBody(body.ToUtf8Json())
                 .GetResult();
 
             IHttpResponse response = null;
@@ -572,7 +578,7 @@ namespace AccelByte.Api
                 .WithPathParam("userId", userId)
                 .WithBearerAuth(AuthToken)
                 .WithContentType(MediaType.ApplicationJson)
-                .WithBody(string.Format("{\"serviceLabel\": \"{0}\"}", playStationDLCSync.serviceLabel))
+                .WithBody(playStationDLCSync.ToUtf8Json())
                 .GetResult();
 
             IHttpResponse response = null;
@@ -687,6 +693,31 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParseJson<EntitlementOwnershipItemIds[]>();
+            callback.Try(result);
+        }
+
+        public IEnumerator SyncEntitlementPSNStore(string userId
+            , PlayStationDLCSync psnModel
+            , ResultCallback callback)
+        {
+            Assert.IsNotNull(Namespace_, "Can't validate user item purchase condition! Namespace_ from parent is null!");
+            Assert.IsNotNull(AuthToken, "Can't validate user item purchase condition! AccessToken from parent is null!");
+
+            var builder = HttpRequestBuilder
+                .CreatePut(BaseUrl + "/public/namespaces/{namespace}/users/{userId}/iap/psn/sync")
+                .WithPathParam("namespace", Namespace_)
+                .WithPathParam("userId", userId)
+                .WithBearerAuth(AuthToken)
+                .WithBody(psnModel.ToUtf8Json())
+                .WithContentType(MediaType.ApplicationJson);
+            var request = builder.GetResult();
+            
+            IHttpResponse response = null;
+
+            yield return HttpClient.SendRequest(request,
+                rsp => response = rsp);
+
+            var result = response.TryParse();
             callback.Try(result);
         }
     }

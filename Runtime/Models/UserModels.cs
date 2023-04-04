@@ -50,7 +50,9 @@ namespace AccelByte.Models
     public class TokenData
     {
         [DataMember] public string access_token { get; set; }
+        [DataMember] public string auth_trust_id { get; set; }
         [DataMember] public string refresh_token { get; set; }
+        [DataMember] public int refresh_expires_in { get; set; }
         [DataMember] public int expires_in { get; set; }
         [DataMember] public string token_type { get; set; }
         [DataMember] public string user_id { get; set; }
@@ -65,6 +67,13 @@ namespace AccelByte.Models
         [DataMember] public string session_id { get; set; }
         [DataMember] public int expires_in { get; set; }
         [DataMember] public string refresh_id { get; set; }
+    }
+
+    [DataContract, Serializable]
+    public class RefreshTokenData
+    {
+        [DataMember] public string refresh_token { get; set; }
+        [DataMember] public int expiration_date { get; set; }
     }
 
     [DataContract]
@@ -225,8 +234,9 @@ namespace AccelByte.Models
         [DataMember] public string avatarUrl { get; set; }
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
-    public enum PlatformType { Steam, EpicGames, PS4, Live, Stadia, Google, Apple, Facebook, Twitch, Oculus, Twitter, Device, Android, iOS, Nintendo, awscognito, PS5, Netflix, EAOrigin }
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum PlatformType { Steam, EpicGames, PS4, Live, Google, Apple, Facebook, Twitch, Oculus, Twitter, Device, 
+        Android, iOS, Nintendo, awscognito, PS5, Netflix, EAOrigin, Discord, Snapchat }
 
     [DataContract]
     public class PlatformLink
@@ -446,6 +456,7 @@ namespace AccelByte.Models
         [DataMember] public Dictionary<string, string> platformUserIds { get; set; } 
         [DataMember] public string userId { get; set; }
         [DataMember] public string publisherAvatarUrl { get; set; }
+        [DataMember] public string username { get; set; }
     }
 
     [DataContract]
@@ -591,5 +602,60 @@ namespace AccelByte.Models
         [DataMember] public PlatformUserInformation[] platformUsers { get; set; }
         [DataMember] public string username { get; set; }
         [DataMember] public string xboxUserId { get; set; }
+    }
+    
+    [DataContract]
+    public class GeneratedOneTimeCode
+    {
+        [DataMember] public string oneTimeLinkCode { get; set; }
+        [DataMember] public string oneTimeLinkURL { get; set; }
+        [DataMember] public int exp { get; set; }
+    }
+
+    [DataContract]
+    public class ListUserDataRequest
+    {
+        [DataMember(Name = "userIds")] public string[] UserIds { get; set; }
+    }
+
+    [DataContract]
+    public class UserDataResponse
+    {
+        [DataMember(Name = "displayName")] public string DisplayName { get; set; }
+        [DataMember(Name = "emailAddress")] public string EmailAddress { get; set; }
+        [DataMember(Name = "namespace")] public string Namespace { get; set; }
+        [DataMember(Name = "userId")] public string UserId { get; set; }
+    }
+
+    [DataContract]
+    public class ListUserDataResponse
+    {
+        [DataMember(Name = "data")] public UserDataResponse[] Data { get; set; }
+    }
+
+    [DataContract]
+    public class LinkHeadlessAccountRequest
+    {
+        [DataMember] public string[] ChosenNamespaces { get; set; }
+        [DataMember] public string OneTimeLinkCode { get; set; }
+    }
+    
+    [DataContract]
+    public class AccountProgressionInfo
+    {
+        [DataMember] public string DisplayName { get; set; }
+        [DataMember] public string Email { get; set; }
+        [DataMember] public string[] LinkedGames { get; set; }
+        [DataMember] public string UserName { get; set; }
+    }
+    
+    [DataContract]
+    public class ConflictLinkHeadlessAccountResult
+    {
+        [DataMember] public AccountProgressionInfo CurrentAccount { get; set; }
+        [DataMember] public AccountProgressionInfo HeadlessAccount { get; set; }
+        [DataMember] public bool PlatformAlreadyLinked { get; set; }
+        [DataMember] public string PlatformId { get; set; }
+        [DataMember] public bool PlatformLinkConflict { get; set; }
     }
 };

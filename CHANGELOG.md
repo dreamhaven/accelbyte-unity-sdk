@@ -2,6 +2,340 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [15.15.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.15.0%0D15.14.0) (2023-03-27)
+
+
+### Features
+
+* added sigterm listener to linux server ([3a1a4eb](https://github.com/AccelByte/accelbyte-unity-sdk/commits/3a1a4ebd079c81bc32f6e1a086c012ce6b921b4c))
+* admin get bulk user by user id ([8948d7e](https://github.com/AccelByte/accelbyte-unity-sdk/commits/8948d7e730deaf27d3edf2dd60040929dbe6f282))
+* **chat:** add notif handler and api (query, update, delete, stats) for system messages ([345a9f0](https://github.com/AccelByte/accelbyte-unity-sdk/commits/345a9f04282fb8dcc7a901d2b14767d621091afa))
+* create connection to Watchdog in SDK Linux Server main ([a626930](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a626930b58dccf6f5d3bc245b2241635d9fe9093))
+* expose Account Linking and Proggresion ([cf26820](https://github.com/AccelByte/accelbyte-unity-sdk/commits/cf26820502ad53be259a58267a8151c137b89b23))
+* mark deprecated since will give security hole issue for other player/user use GetUserProfilePublicInfo instead. function now just only have error message ([a84aa24](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a84aa248f1d74286af9e64ec4de2c8fe6efa04d4))
+
+
+### Refactors
+
+* add log when SDK start ([ebf9149](https://github.com/AccelByte/accelbyte-unity-sdk/commits/ebf9149152c87a3ed0a2eaf8211204beaa7e535e))
+
+## [15.14.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.14.0%0D15.13.0) (2023-03-13)
+
+
+### Features
+
+* **DS:** add watchdog api ([c804b17](https://github.com/AccelByte/accelbyte-unity-sdk/commits/c804b17de765414c3864cd7c813e12a22d0cd810))
+
+
+### Documentations
+
+* remove documentation of directly creating config files ([69bcbf6](https://github.com/AccelByte/accelbyte-unity-sdk/commits/69bcbf661218e55f82d4936af1f2dcfc6748bc51))
+
+
+### Refactors
+
+* add http send request with async method ([0bad98a](https://github.com/AccelByte/accelbyte-unity-sdk/commits/0bad98aef6bd733449d92d951ac43ae3817d93f9))
+* change heartbeat with async ([5233d70](https://github.com/AccelByte/accelbyte-unity-sdk/commits/5233d70dd5ec4f6a36568fc13c5527b6625048cd))
+* change websocket maintainer with async method ([9489bec](https://github.com/AccelByte/accelbyte-unity-sdk/commits/9489bec8d8ef198b2f6cb8626b44b4b811c2c7a8))
+* create async method of heartbeat, websocket, http request ([b9246e6](https://github.com/AccelByte/accelbyte-unity-sdk/commits/b9246e6c1c64394722b49b2aaa739cf33b2c2416))
+* seperate device identifier and device unique id ([9b9fcd7](https://github.com/AccelByte/accelbyte-unity-sdk/commits/9b9fcd7adad5ce32ce9d4046a50a2cf97df22869))
+* set config editor default environment to default ([26bf0eb](https://github.com/AccelByte/accelbyte-unity-sdk/commits/26bf0ebbd4e8424aefe1def47568759c4bc856bd))
+
+## [15.13.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.13.0%0D15.12.0) (2023-02-28)
+
+
+### Features
+
+* adding global achievements endpoints ([7c5b4cb](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7c5b4cbbb71c34e00386add24a5aafa064303bbc))
+
+
+### Bug Fixes
+
+* fix unsupported code in lower version csharp ([e2bded8](https://github.com/AccelByte/accelbyte-unity-sdk/commits/e2bded84704e83e80f7d8a31056abb0ac1ccbf3a))
+
+
+### Refactors
+
+* set app id as non mandatory config field ([535d54d](https://github.com/AccelByte/accelbyte-unity-sdk/commits/535d54de92346e9f3994fc576a8d860302f3eeac))
+
+## [15.12.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.12.0%0D15.11.2) (2023-02-13)
+
+
+### Features
+
+* [JSC-1032] add compatibility matrix check ([4932ee2](https://github.com/AccelByte/accelbyte-unity-sdk/commits/4932ee229680a1cc7dfad649d410374d4555bcf3))
+* add ugc custom attributes ([208ac2d](https://github.com/AccelByte/accelbyte-unity-sdk/commits/208ac2d37bb8868f0188df84b033ecc0522f7207))
+* cache config ([14b5985](https://github.com/AccelByte/accelbyte-unity-sdk/commits/14b59855fbd4123573d9be0a58a8cebaccae4e8d))
+* get game token by publisher token ([65901c8](https://github.com/AccelByte/accelbyte-unity-sdk/commits/65901c820d605841489752b9ca353b3d3b974911))
+* http cache ([3fd4194](https://github.com/AccelByte/accelbyte-unity-sdk/commits/3fd4194cce327fd757ff72ac95c88ba67d196117))
+* http cache ([ce6c25c](https://github.com/AccelByte/accelbyte-unity-sdk/commits/ce6c25c1d18ac5046955ca23c7dd8bff4b45dbab))
+* **lobby:** add reject match ([ed03ffa](https://github.com/AccelByte/accelbyte-unity-sdk/commits/ed03ffafc9c0a5a9afacf52ba1da56a2696bf393))
+* LRU Memory implementation ([eec8b01](https://github.com/AccelByte/accelbyte-unity-sdk/commits/eec8b01f94f671aa43ae95a6329cf3f13ee33e3a))
+* new v2 group api ([cb27b6a](https://github.com/AccelByte/accelbyte-unity-sdk/commits/cb27b6a9d7ba185561eb651e4b3710bc32f08434))
+* new v2 group api ([19f4675](https://github.com/AccelByte/accelbyte-unity-sdk/commits/19f4675d0789f3972ea1eca16966ab464292c86c))
+* Remove some Stadia enumeration variable, because Google is shutting down Stadia. ([92b3de4](https://github.com/AccelByte/accelbyte-unity-sdk/commits/92b3de4bb33340d7c38f2336bf0c395bf727ef27))
+* **turnmanager:** add api to get turn server credential ([a37e87b](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a37e87b241b225c46cf28925d09aad84c616a16d))
+* user ban error response ([18f0eca](https://github.com/AccelByte/accelbyte-unity-sdk/commits/18f0ecafcc45c1a049078438bc372f2832318194))
+* user ban error response ([c359f21](https://github.com/AccelByte/accelbyte-unity-sdk/commits/c359f21dd2ec2f1d3269169f3ce3b5e4df015982))
+
+
+### Bug Fixes
+
+* change default current_player and current_internal_player to 0 ([9e89460](https://github.com/AccelByte/accelbyte-unity-sdk/commits/9e894603c5ec8e47ba8fa75c1b8a455e2f26de19))
+* fix unsupported code in lower version csharp ([b3685b2](https://github.com/AccelByte/accelbyte-unity-sdk/commits/b3685b258c9315b335c9166d2ea70115062cfd95))
+* generate sdk version metadata file ([3eba075](https://github.com/AccelByte/accelbyte-unity-sdk/commits/3eba0752ede8471033473a701b30cdbe6c02b628))
+* revert default config directory to resource root ([a095a76](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a095a76796640bd67805d7c157f1569362920399))
+* set server flag on save OAuth file ([9858bf9](https://github.com/AccelByte/accelbyte-unity-sdk/commits/9858bf97a8850a068663f4fb405407b611e1be35))
+
+
+### Refactors
+
+* add changeable http sender ([197896e](https://github.com/AccelByte/accelbyte-unity-sdk/commits/197896e609e6cb45815b53abe5a846ff52c15b7c))
+
+### [15.11.2](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.11.2%0D15.11.1) (2023-02-01)
+
+
+### Bug Fixes
+
+* missing NUnit package causes compile error ([7186b5b](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7186b5b9772329529cc523315545b0a3135aa53d))
+
+### [15.11.1](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.11.1%0D15.11.0) (2023-01-31)
+
+
+### Bug Fixes
+
+* **chat:** change class initialization to support c[#8](https://accelbyte.atlassian.net/browse/8) and below ([cfec4ea](https://github.com/AccelByte/accelbyte-unity-sdk/commits/cfec4ea77bd1e3ed52df0eb2d529d20f7dedf775))
+* define AccelByteNetUtilities explicitly public ([b63d37d](https://github.com/AccelByte/accelbyte-unity-sdk/commits/b63d37dcb04e067df806e57d4cf77e9af7349004))
+
+## [15.11.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.11.0%0D15.10.1) (2023-01-30)
+
+
+### Features
+
+* **chat:** add chat apis ([123684c](https://github.com/AccelByte/accelbyte-unity-sdk/commits/123684c1aa3f1bf247c02b6a26dfeb8bbf3c19d5))
+* **turnmanager:** add api to get turn server credential ([5fa327e](https://github.com/AccelByte/accelbyte-unity-sdk/commits/5fa327e0e1efbc40babe16ffa2e1e0b3fffa1f35))
+
+
+### Bug Fixes
+
+* set server flag on save OAuth file ([55440e1](https://github.com/AccelByte/accelbyte-unity-sdk/commits/55440e198457af6e08954ea53b5bbad322032777))
+
+### [15.9.1](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.9.1%0D15.10.0) (2023-01-18)
+
+
+### Features
+
+* add required text on config input field ([6e89b48](https://github.com/AccelByte/accelbyte-unity-sdk/commits/6e89b4874458377ea29a35aceca18d58bd440f79))
+* implement new endpoint bulk get user and game records ([41c65e8](https://github.com/AccelByte/accelbyte-unity-sdk/commits/41c65e87bc7f0246e2d8ea54dc1257084bec2639))
+
+
+### Bug Fixes
+
+* add missing param title to reporting api ([926fd4e](https://github.com/AccelByte/accelbyte-unity-sdk/commits/926fd4ec15f1a86200595dee2205d45a50961f46))
+* add safe guard and refactor with debugable code of http error parser ([76cde28](https://github.com/AccelByte/accelbyte-unity-sdk/commits/76cde28bea30af0a0616c8ac72ff6dd67f8c5eab))
+* fix websocket not running coroutine in their events ([7e90ec9](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7e90ec95e85c124212dce509e0717ba213ec0aac))
+* missing Unity meta files ([ebe2c2d](https://github.com/AccelByte/accelbyte-unity-sdk/commits/ebe2c2d678e6637ea08594706d706f7fd5861d6e))
+* unsupported C# implementation in Unity 2019 ([5b7168e](https://github.com/AccelByte/accelbyte-unity-sdk/commits/5b7168ea903e0a45519df834f007ac9e7af4d880))
+
+
+### Refactors
+
+* refactor accelbyte setting into non singleton structure ([bc9bec5](https://github.com/AccelByte/accelbyte-unity-sdk/commits/bc9bec5b5ab5fe3bf3e26de6101625cff142885f))
+* repositioned config editor order and add foldout category ([e89dbdd](https://github.com/AccelByte/accelbyte-unity-sdk/commits/e89dbddebfc86574c24ba9531362acf989a6a3d8))
+
+### [15.10.1](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.10.1%0D15.10.0) (2023-01-18)
+
+
+### Bug Fixes
+
+* missing Unity meta files ([f61bc31](https://github.com/AccelByte/accelbyte-unity-sdk/commits/f61bc314fa49c7c3d9888895986c794e2911ef53))
+* unsupported C# implementation in Unity 2019 ([7ffb40f](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7ffb40f4123d8780fb14c55329fa665ab345c9c0))
+
+## [15.10.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.10.0%0D15.9.0) (2023-01-16)
+
+
+### Features
+
+* [JSC-916] add device ID generator ([4ae2160](https://github.com/AccelByte/accelbyte-unity-sdk/commits/4ae216021ad2e842cac3074543912739d7396302))
+* ability to set logger ([ea3ebc9](https://github.com/AccelByte/accelbyte-unity-sdk/commits/ea3ebc911d6e052dfc560abc2375c9f0c8b5fe96))
+* get global statistic item by stat code ([a3b2bcc](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a3b2bcc867bd30692908743978679ef1ba69160f))
+
+
+### Bug Fixes
+
+* [JSC-1020] replace websocket-sharp.dll properly ([42e0d9e](https://github.com/AccelByte/accelbyte-unity-sdk/commits/42e0d9e96db3319c31209ddfce9835d74296838d))
+
+
+### Refactors
+
+* rename websockket-sharp to accelbyte.websocket.sharp ([c2daec4](https://github.com/AccelByte/accelbyte-unity-sdk/commits/c2daec4b6d3a7df9b448aaf9a9b93420445899b1))
+
+## [15.9.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.9.0%0D15.8.1) (2023-01-03)
+
+
+### Features
+
+* Displays & sections (Rotating Shop Items) ([1e4955c](https://github.com/AccelByte/accelbyte-unity-sdk/commits/1e4955c1de8a75d85df20eb0df216cdcea97eb04))
+* **lobby:** Add away availability in lobby presence ([eb0ecb7](https://github.com/AccelByte/accelbyte-unity-sdk/commits/eb0ecb7fbcfcd1b280f7ea8b173b6947e493d111))
+* new get achievement public tag endpoint ([0401fb1](https://github.com/AccelByte/accelbyte-unity-sdk/commits/0401fb1cec37be216bdfe67f266bc098004ca0d9))
+* renamed api class for rotating item feature ([7295ea8](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7295ea8cbdc2239ed5a9fe08ec441d00f0382729))
+* **Session:** add ENDED and UNKNOWN DS status ([0a6db06](https://github.com/AccelByte/accelbyte-unity-sdk/commits/0a6db064b491a237ba05282e592ca12e0d71a4da))
+
+
+### Bug Fixes
+
+* GetItemsByCriteria parse Error ([f02ec4d](https://github.com/AccelByte/accelbyte-unity-sdk/commits/f02ec4d578e72c6e21e16f1e51c1099e59888252))
+
+### [15.8.1](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.8.1%0D15.8.0) (2022-12-23)
+
+
+### Bug Fixes
+
+* unsupported implicit instantiation when using .NET Framework ([6af58e5](https://github.com/AccelByte/accelbyte-unity-sdk/commits/6af58e519b430bd62402e3405aabf08a64fff51f))
+
+## [15.8.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.8.0%0D15.7.0) (2022-12-19)
+
+
+### Features
+
+* Account linking with one-time code ([c63999b](https://github.com/AccelByte/accelbyte-unity-sdk/commits/c63999bcfa5e0ff4362d733ba1fb193fbf6702b3))
+* add Snapchat & Discord to PlatformType Model ([a830e0b](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a830e0b56f38db04ddea00a791108d92c29c2e21))
+* **doxygen:** add check envar before generate docs ([a8598c9](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a8598c91bddc332f0f61b91a1b59946141335144))
+* **doxygen:** generate doxygen document when compilation triggerred ([2a1a10d](https://github.com/AccelByte/accelbyte-unity-sdk/commits/2a1a10dbfe944af7725244e4638d581396e23b5a))
+
+
+### Bug Fixes
+
+* fix sdk setting editor error and add scrollbar ([13e051f](https://github.com/AccelByte/accelbyte-unity-sdk/commits/13e051f4c6310ba6600ccc19d6dd1480d2bc39ea))
+* GetItemsByCriteria parse Error ([6a4c619](https://github.com/AccelByte/accelbyte-unity-sdk/commits/6a4c61949c2f7eef850f9e2e1d92acf842ff6f8a))
+* handle lobby received ban and unban ([54c2c7d](https://github.com/AccelByte/accelbyte-unity-sdk/commits/54c2c7d2c2809407c8b91fe137cafb1a9c8b085a))
+* set dummy coroutine dont destroy called by gameobject ([aa498ef](https://github.com/AccelByte/accelbyte-unity-sdk/commits/aa498ef6bf155aed9ddc8fce88db359de6241eab))
+
+## [15.7.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.7.0%0D15.6.0) (2022-12-05)
+
+
+### Features
+
+* add .editorconfig ([9cd051a](https://github.com/AccelByte/accelbyte-unity-sdk/commits/9cd051a7ac04446b6937e0804a292a9939bef4b0))
+* add heartbeat service ([d9beaae](https://github.com/AccelByte/accelbyte-unity-sdk/commits/d9beaaef04d8cb5e39ada42b07b5b9dae998aa68))
+* Exposing Get Item By Criteria in DS ([7c05cde](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7c05cde150729c5a0da8fd5bd4940357e42c3a88))
+* PSN sync endpoint to be able to receive multiple service labels ([e44a7bd](https://github.com/AccelByte/accelbyte-unity-sdk/commits/e44a7bd60e5a2ab1cd8abeada8aa9559dc32405f))
+* sanitize base url on load ([6ddcfd5](https://github.com/AccelByte/accelbyte-unity-sdk/commits/6ddcfd5662c21609a1d9641a7776ad0b67774777))
+* tag query builder class for endpoint with search function with tags. ([9a1bb73](https://github.com/AccelByte/accelbyte-unity-sdk/commits/9a1bb73a8903b7a182c35b8d02af6ef84c7ddca4))
+
+
+### Bug Fixes
+
+* disable HeartBeat in DS ([c452982](https://github.com/AccelByte/accelbyte-unity-sdk/commits/c4529822f4110266e454342b348ec34e90ec3bd1))
+* http request namespace defined from parameter ([f1a4ca4](https://github.com/AccelByte/accelbyte-unity-sdk/commits/f1a4ca4ced6ddf216f469c8dab99b4990f9bda02))
+* misleading readme.md ([db98846](https://github.com/AccelByte/accelbyte-unity-sdk/commits/db9884699d09f2e53288727b20f011633fbc316c))
+
+
+### Refactors
+
+* set oAuth return the result ([3ffe332](https://github.com/AccelByte/accelbyte-unity-sdk/commits/3ffe3322985e688d2cb66421c7ceba14ab0912db))
+
+## [15.6.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.6.0%0D15.5.0) (2022-11-21)
+
+
+### Features
+
+* add new item type ecommerce lootbox ([52e0d61](https://github.com/AccelByte/accelbyte-unity-sdk/commits/52e0d615f2ffc9cac546ffefe7368a4380a6638a))
+* **DSM:** add public getter for server name ([73d92cb](https://github.com/AccelByte/accelbyte-unity-sdk/commits/73d92cb181211929b741cb41b975157b4f6d2a55))
+* expose get store list for ds ([ff5ab53](https://github.com/AccelByte/accelbyte-unity-sdk/commits/ff5ab531f9a667fbbf0911d41e700bc19338fb4e))
+* **misc:** add get back calculated server time ([aec6579](https://github.com/AccelByte/accelbyte-unity-sdk/commits/aec6579c32160325efce5bdf17df6828039b1a32))
+* **refresh token:** change refresh token playerprefs save method with binary file save ([e441db6](https://github.com/AccelByte/accelbyte-unity-sdk/commits/e441db6c294880934f68cc62c2d1660977ab2998))
+* **serverApiClient:** cache instantiated wrapper ([36255e4](https://github.com/AccelByte/accelbyte-unity-sdk/commits/36255e4b79c4b856a169a9fdaef3a7ec420b0ead))
+* **session:** add Disconnected and terminated member status enum ([8932068](https://github.com/AccelByte/accelbyte-unity-sdk/commits/89320688e22c695710594fbef69cd0ce1ae1583b))
+
+
+### Bug Fixes
+
+* add empty DsHubNotificationTopic enum ([1437730](https://github.com/AccelByte/accelbyte-unity-sdk/commits/1437730a304ad5d05f93f9bc7bed50dbe81d609e))
+* cache server name when register local server ([e85ece2](https://github.com/AccelByte/accelbyte-unity-sdk/commits/e85ece2dd1136d2a62af717ae9b350530ac3ce4e))
+* fix bearer unathorized loop stuck ([d3ab66a](https://github.com/AccelByte/accelbyte-unity-sdk/commits/d3ab66a5f18ce4161429c22926e5ea13ddd0d460))
+* update access token failed authentication flow ([a7f0256](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a7f0256e68bb781e723b987780f16ac591b973a6))
+* Update SessionV2DsInformation and SessionV2MemberStatus ([7e50e1e](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7e50e1e8dfd929d8515187646944e6f7ea811463))
+
+
+### Tests
+
+* add severity, time, and stacktraces to logger ([5029393](https://github.com/AccelByte/accelbyte-unity-sdk/commits/50293939b275d36dd632e9ccf3944cfe36977f77))
+
+## [15.5.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.5.0%0D15.4.0) (2022-11-07)
+
+
+### Features
+
+* fixed subscription test that always fail ([499244f](https://github.com/AccelByte/accelbyte-unity-sdk/commits/499244f9f4b78e24cd01e18e4cb7888a602e5c62))
+* OPTIONBOX on EAccelByteEntitlementClass ([4b3c67a](https://github.com/AccelByte/accelbyte-unity-sdk/commits/4b3c67a883811f7367a41bf6e8fc9d43ed8768a5))
+* username field in the BaseUserInfo function ([9cf8eb5](https://github.com/AccelByte/accelbyte-unity-sdk/commits/9cf8eb5ccfb7c34a9d61b08a3e41fe90b75565ad))
+
+## [15.4.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.4.0%0D15.3.0) (2022-10-24)
+
+
+### Features
+
+* Bulk get user season progression API ([fb970e8](https://github.com/AccelByte/accelbyte-unity-sdk/commits/fb970e83dcfb39d83f26be259ef4366e32d06b04))
+* deprecated endpoint /iam/oauth/token, added new end point /iam/v3/oauth/verify ([066de9a](https://github.com/AccelByte/accelbyte-unity-sdk/commits/066de9acd87bc9b4000411e9c990981cff436323))
+* deprecated endpoint /iam/oauth/token, added new end point /iam/v3/oauth/verify ([ceedce0](https://github.com/AccelByte/accelbyte-unity-sdk/commits/ceedce00870b360671e8c8aa1146126627730c36))
+* Expose update channel public endpoint ([1bf155b](https://github.com/AccelByte/accelbyte-unity-sdk/commits/1bf155bd5453fc661c630364e871c89cfd72bb5d))
+* IAM Phase 3 Statement & Substitute Implementation ([9b680ee](https://github.com/AccelByte/accelbyte-unity-sdk/commits/9b680ee72b6e80e014212cf4995488874dffedee))
+* IAM Phase 4 Statement & Substitute Implementation ([1ddf21f](https://github.com/AccelByte/accelbyte-unity-sdk/commits/1ddf21f72cea41d617a207db3092497c95d00c89))
+* UnitTest/Sample Code SyncSteamDLC ([10a8470](https://github.com/AccelByte/accelbyte-unity-sdk/commits/10a847040e33fbacd72d845e30248557d0bf2dbc))
+
+
+### Bug Fixes
+
+* adopt the changes from lobby session refactoring ([881fd6d](https://github.com/AccelByte/accelbyte-unity-sdk/commits/881fd6d4ff1eaf84255bafb194b9c01d3aa173c2))
+* client sdk config type misplaced ([228295c](https://github.com/AccelByte/accelbyte-unity-sdk/commits/228295c60b2fab59b160358dbb9809172612d190))
+* comment out matchmaking code to avoid build test crashes ([c69679e](https://github.com/AccelByte/accelbyte-unity-sdk/commits/c69679e723574202ddd2d5c7db775c4f10bb1445))
+* comment out protobuf messaage notification handling ([4889e85](https://github.com/AccelByte/accelbyte-unity-sdk/commits/4889e858643f51f448bbe06ffed457a682104c2e))
+* fix wrong purchase condition model in item api BREAKING CHANGES: updated item info model ([a94338c](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a94338c0152e19da5e3f1900b20c42f24d226829))
+* **lobby:** fix presence message still uri escaped on FriendsStatusChanged and ListOnlineFriends ([71e9044](https://github.com/AccelByte/accelbyte-unity-sdk/commits/71e90447f5d670d98bc4b039bb3f0703fbd0ce0d))
+* missing dependency after rebase ([02d8eec](https://github.com/AccelByte/accelbyte-unity-sdk/commits/02d8eeccb0e558799b86977f87fcf258d2d1fca3))
+* missing request model for promote member to party leader ([b2765d0](https://github.com/AccelByte/accelbyte-unity-sdk/commits/b2765d07a73e770708df9e1c7d54cef29a484ec0))
+* mistaken refactor of session model and server config ([7509b78](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7509b78a24cf0d49c8ede65928eb2d47029f133c))
+* rename typo, confusing namespace, remove UpdateGameSession ([6e511ba](https://github.com/AccelByte/accelbyte-unity-sdk/commits/6e511ba56997b46972a63f75cf51c82f23207b32))
+* session info replace session member and ds status changed notif ([9d8dda4](https://github.com/AccelByte/accelbyte-unity-sdk/commits/9d8dda4ba2fc79f51f9e21e210eea06189bae05b))
+* SessionV2DsInformation can has null requestedAt ([49f2000](https://github.com/AccelByte/accelbyte-unity-sdk/commits/49f2000b0510ac8cc6ebb7af95828f95669408ca))
+* typo in Lobby.cs of session v2 notification ([e1a5249](https://github.com/AccelByte/accelbyte-unity-sdk/commits/e1a524939b56a4b0e89286ae6bf547f9ba38c310))
+* typo in ServerMatchmakingApi.cs ([3870417](https://github.com/AccelByte/accelbyte-unity-sdk/commits/38704173545e296c9c2c83ea89455b3bbcab1892))
+
+
+### Tests
+
+* Refactor and improved party test coverage and quality ([4750084](https://github.com/AccelByte/accelbyte-unity-sdk/commits/4750084ce098e1a1d614d315e4810ff36f8ac58f))
+
+
+### Refactors
+
+* handle session notifications as json instead of protobuf ([f1cba09](https://github.com/AccelByte/accelbyte-unity-sdk/commits/f1cba09db43fbf959b744e3b0b3c352cdaccf0cb))
+* **lobby:** move websocket api call into a new class ([8dfcf60](https://github.com/AccelByte/accelbyte-unity-sdk/commits/8dfcf60c495d0ae1b5679a69e3ab38af68dedfcc))
+* MMv2 RejectBackfillProposal use backfill proposal notification directly ([7db3057](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7db3057e530537a5d63c420666d8410218a85c56))
+* remove protobuf library and generated class ([93ed4b7](https://github.com/AccelByte/accelbyte-unity-sdk/commits/93ed4b704659569a83ef25f47c804d7438f698d3))
+
+## [15.3.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.3.0%0D15.2.0) (2022-10-10)
+
+
+### Features
+
+*  Bruteforce protection upon game login ([f24e935](https://github.com/AccelByte/accelbyte-unity-sdk/commits/f24e9354684ff2ad9c609128ea98bf2b3ef537e2))
+* adjustment for improve entitlement track log ([8a98deb](https://github.com/AccelByte/accelbyte-unity-sdk/commits/8a98debbf8dda2d38cabdb195a597a3f4af03951))
+* banning by device id (PSN, XBOX) ([0dd98fc](https://github.com/AccelByte/accelbyte-unity-sdk/commits/0dd98fc0b9d72ca36a0659154d9f99b05e559aab))
+* expose Get and Update PrivateCustomAttributes ([7adc696](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7adc696c413a9737cfbc5646c5666fdf563b407f))
+* **HTTP:** adding SDK version to the resource and add HTTP headers metadata [sdk version, game client version, namespace] ([fb041ee](https://github.com/AccelByte/accelbyte-unity-sdk/commits/fb041ee42190450100068f6664f96729c0c7625a))
+* **lobby:** add send party notif ([a1f36ed](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a1f36eded46e54ec02ffde8d4bef30071e5ea1f2))
+* **lobby:** support for role based matchmaking ([835704f](https://github.com/AccelByte/accelbyte-unity-sdk/commits/835704f68e556c8e8272ada52baf7625a5481492))
+* **lobby:** support rejected status on role based matchmaking ([2f30c17](https://github.com/AccelByte/accelbyte-unity-sdk/commits/2f30c1732ad7a87f53499aedfbd7bbacb3d291df))
+* Temporarily cache telemetry data into the local disk storage ([7676ad8](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7676ad85e33bf8ea8139ce2b4525a0d91df7210e))
+
+
+### Bug Fixes
+
+* **lobby:** fix presence message still uri escaped on FriendsStatusChanged and ListOnlineFriends ([d546342](https://github.com/AccelByte/accelbyte-unity-sdk/commits/d546342b3ad5cb68c923e22d10a34bd0c5aa2f74))
+* support get wallet info old workflow ([e59db17](https://github.com/AccelByte/accelbyte-unity-sdk/commits/e59db17b72b7e4d53823ef4e76f55df4d70f7752))
+
 ## [15.2.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.2.0%0D15.1.0) (2022-09-27)
 
 

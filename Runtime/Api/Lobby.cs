@@ -7,11 +7,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using AccelByte.Core;
 using AccelByte.Models;
+using AccelByte.Server;
 using UnityEngine;
 using UnityEngine.Assertions;
 using HybridWebSocket;
+using Newtonsoft.Json;
 using Random = System.Random;
 
 namespace AccelByte.Api
@@ -62,6 +65,87 @@ namespace AccelByte.Api
         /// Raised when a user reject party invitation
         /// </summary>
         public event ResultCallback<PartyRejectNotif> RejectedPartyInvitation;
+
+        /// <summary>
+        /// SessionV2 - Raised when a party session is updated
+        /// </summary>
+        public event ResultCallback<SessionV2PartySessionUpdatedNotification> SessionV2PartyUpdated;
+
+        /// <summary>
+        /// SessionV2 - Raised when a user is being invited to a party
+        /// </summary>
+        public event ResultCallback<SessionV2PartyInvitationNotification> SessionV2InvitedUserToParty;
+
+        /// <summary>
+        /// SessionV2 - Raised when a user joined a party
+        /// </summary>
+        public event ResultCallback<SessionV2PartyJoinedNotification> SessionV2UserJoinedParty;
+
+        /// <summary>
+        /// SessionV2 - Raised when a party's members changed
+        /// </summary>
+        public event ResultCallback<SessionV2PartyMembersChangedNotification> SessionV2PartyMemberChanged;
+
+        /// <summary>
+        /// SessionV2 - Raised when a user rejected party invitation
+        /// </summary>
+        public event ResultCallback<SessionV2PartyInvitationRejectedNotification> SessionV2UserRejectedPartyInvitation;
+
+        /// <summary>
+        /// SessionV2 - Raised when a user is kicked from party
+        /// </summary>
+        public event ResultCallback<SessionV2PartyUserKickedNotification> SessionV2UserKickedFromParty;
+
+        /// <summary>
+        /// SessionV2 - Raised when a user is being invited to a game session
+        /// </summary>
+        public event ResultCallback<SessionV2GameInvitationNotification> SessionV2InvitedUserToGameSession;
+
+        /// <summary>
+        /// SessionV2 - Raised when a user joined a game session
+        /// </summary>
+        public event ResultCallback<SessionV2GameJoinedNotification> SessionV2UserJoinedGameSession;
+
+        /// <summary>
+        /// SessionV2 - Raised when a game session's members changed
+        /// </summary>
+        public event ResultCallback<SessionV2GameMembersChangedNotification> SessionV2GameSessionMemberChanged;
+
+        /// <summary>
+        /// SessionV2 - Raised when a user is kicked from game session
+        /// </summary>
+        public event ResultCallback<SessionV2GameUserKickedNotification> SessionV2UserKickedFromGameSession;
+
+        /// <summary>
+        /// SessionV2 - Raised when a user rejected game session invitation
+        /// </summary>
+        public event ResultCallback<SessionV2GameInvitationRejectedNotification>
+            SessionV2UserRejectedGameSessionInvitation;
+
+        /// <summary>
+        /// SessionV2 - Raised when a game session is updated
+        /// </summary>
+        public event ResultCallback<SessionV2GameSessionUpdatedNotification> SessionV2GameSessionUpdated;
+
+        /// <summary>
+        /// SessionV2 - Raised when status of DS changed
+        /// </summary>
+        public event ResultCallback<SessionV2DsStatusUpdatedNotification> SessionV2DsStatusChanged;
+
+        /// <summary>
+        /// MatchmakingV2 - Raised when match is found
+        /// </summary>
+        public event ResultCallback<MatchmakingV2MatchFoundNotification> MatchmakingV2MatchFound;
+
+        /// <summary>
+        /// MatchmakingV2 - Raised when matchmaking started
+        /// </summary>
+        public event ResultCallback<MatchmakingV2MatchmakingStartedNotification> MatchmakingV2MatchmakingStarted;
+
+        /// <summary>
+        /// MatchmakingV2 - Raised when matchmaking ticket expired
+        /// </summary>
+        public event ResultCallback<MatchmakingV2TicketExpiredNotification> MatchmakingV2TicketExpired;
 
         /// <summary>
         /// Raised when personal chat message received.
@@ -117,6 +201,11 @@ namespace AccelByte.Api
         /// Raised when user from within the same party confirmed he/she is ready for match
         /// </summary>
         public event ResultCallback<ReadyForMatchConfirmation> ReadyForMatchConfirmed;
+        
+        /// <summary>
+        /// Raised when a user rejected the match
+        /// </summary>
+        public event ResultCallback<ReadyForMatchConfirmation> MatchRejected;
 
         /// <summary>
         /// Raised when DS process is updated.
@@ -124,11 +213,16 @@ namespace AccelByte.Api
         public event ResultCallback<DsNotif> DSUpdated;
 
         public event ResultCallback<RematchmakingNotification> RematchmakingNotif;
-        
+
         /// <summary>
         /// Raised when there's an update in the party's storage.
         /// </summary>
         public event ResultCallback<PartyDataUpdateNotif> PartyDataUpdateNotif;
+        
+        /// <summary>
+        /// Raised when other party member send party notification.
+        /// </summary>
+        public event ResultCallback<PartyNotif> PartyNotif;
 
         /// <summary>
         /// Raised when channel chat message received.
@@ -139,7 +233,7 @@ namespace AccelByte.Api
         /// Raised when player is blocked.
         /// </summary>
         public event ResultCallback<PlayerBlockedNotif> PlayerBlockedNotif;
-        
+
         /// <summary>
         /// Raised when player is unblocked.
         /// </summary>
@@ -164,7 +258,7 @@ namespace AccelByte.Api
         /// Raised when lobby access token succesfully updated
         /// </summary>
         public event Action TokenRefreshed;
-        
+
         #endregion PublicEvents
 
         private LobbyWebsocketApi websocketApi;
@@ -177,12 +271,15 @@ namespace AccelByte.Api
         
         private bool reconnectsOnBans;
 
+        /// <summary>
+        /// Event triggered each time a websocket reconnection attempt failed
+        /// </summary>
         public event EventHandler OnRetryAttemptFailed
         {
             add => websocketApi.WebSocket.OnRetryAttemptFailed += value;
             remove => websocketApi.WebSocket.OnRetryAttemptFailed -= value;
         }
-        
+
         internal Lobby(LobbyApi inApi
             , UserSession inSession
             , CoroutineRunner inCoroutineRunner)
@@ -205,6 +302,14 @@ namespace AccelByte.Api
             OverrideWebsocket(webSocket);
         }
 
+        /// <summary>
+        /// Override current websocket instance, and set new retry parameters
+        /// </summary>
+        /// <param name="inWebSocket">IWebsocket instance to use</param>
+        /// <param name="inPingDelay">delay for each connection ping</param>
+        /// <param name="inBackoffDelay">first backoff delay duration for a retry connection attempt</param>
+        /// <param name="inMaxDelay">max delay for each retry connection attempt</param>
+        /// <param name="inTotalTimeout"></param>
         public void OverrideWebsocket(IWebSocket inWebSocket
             , int inPingDelay = 4000
             , int inBackoffDelay = 1000
@@ -236,9 +341,9 @@ namespace AccelByte.Api
         /// <param name="inTotalTimeout">Time limit until stop to re-attempt</param>
         /// <param name="inBackoffDelay">Initial delay time</param>
         /// <param name="inMaxDelay">Maximum delay time</param>
-        public void SetRetryParameters( int inTotalTimeout = 60000
+        public void SetRetryParameters(int inTotalTimeout = 60000
             , int inBackoffDelay = 1000
-            , int inMaxDelay = 30000 )
+            , int inMaxDelay = 30000)
         {
             websocketApi.SetRetryParameters(inTotalTimeout, inBackoffDelay, inMaxDelay);
         }
@@ -249,7 +354,7 @@ namespace AccelByte.Api
         /// For entitlement token verification, use EntitlementTokenGenerator class on the parameter.
         /// </summary>
         /// <param name="tokenGenerator"> Token generator for connecting lobby. </param>
-        public void SetConnectionTokenGenerator( ITokenGenerator tokenGenerator )
+        public void SetConnectionTokenGenerator(ITokenGenerator tokenGenerator)
         {
             websocketApi.SetConnectionTokenGenerator(tokenGenerator);
         }
@@ -270,13 +375,14 @@ namespace AccelByte.Api
         }
 
         #region Party
+
         /// <summary>
         /// Get party information (leader, members, invitation token)
         /// </summary>
         /// <param name="callback">
         /// Returns a Result that contains PartyInfo via callback when completed.
         /// </param>
-        public void GetPartyInfo( ResultCallback<PartyInfo> callback )
+        public void GetPartyInfo(ResultCallback<PartyInfo> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.GetPartyInfo(callback);
@@ -289,7 +395,7 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Returns a Result that contain PartyInfo via callback when completed.
         /// </param>
-        public void CreateParty( ResultCallback<PartyInfo> callback )
+        public void CreateParty(ResultCallback<PartyInfo> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.CreateParty(callback);
@@ -302,7 +408,7 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Returns a Result that contain PartyCreateResponse via callback when completed.
         /// </param>
-        public void CreateParty( ResultCallback<PartyCreateResponse> callback )
+        public void CreateParty(ResultCallback<PartyCreateResponse> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.CreateParty(callback);
@@ -312,7 +418,7 @@ namespace AccelByte.Api
         /// Leave a party a current logged in user is in.
         /// </summary>
         /// <param name="callback">Returns a Result via callback when completed</param>
-        public void LeaveParty( ResultCallback callback )
+        public void LeaveParty(ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.LeaveParty(callback);
@@ -323,8 +429,8 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="userId">User Id of a person to be invited to </param>
         /// <param name="callback">Returns a Result via callback when completed</param>
-        public void InviteToParty( string userId
-            , ResultCallback callback )
+        public void InviteToParty(string userId
+            , ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.InviteToParty(userId, callback);
@@ -338,8 +444,8 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Returns a Result that contain PartyInviteResponse via callback when completed
         /// </param>
-        public void InviteToPartyDetailedCallback( string userId
-            , ResultCallback<PartyInviteResponse> callback )
+        public void InviteToPartyDetailedCallback(string userId
+            , ResultCallback<PartyInviteResponse> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.InviteToPartyDetailedCallback(userId, callback);
@@ -353,9 +459,9 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Returns a Result that contains PartyInfo via callback when completed
         /// </param>
-        public void JoinParty( string partyID
+        public void JoinParty(string partyID
             , string invitationToken
-            , ResultCallback<PartyInfo> callback )
+            , ResultCallback<PartyInfo> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.JoinParty(partyID, invitationToken, callback);
@@ -366,8 +472,8 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="userId">User Id of the user to be kicked out of party</param>
         /// <param name="callback">Returns a Result via callback when completed.</param>
-        public void KickPartyMember( string userId
-            , ResultCallback callback )
+        public void KickPartyMember(string userId
+            , ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.KickPartyMember(userId, callback);
@@ -381,8 +487,8 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Returns a Result that contains PartyKickResponse via callback when completed.
         /// </param>
-        public void KickPartyMemberDetailedCallback( string userId
-            , ResultCallback<KickResponse> callback )
+        public void KickPartyMemberDetailedCallback(string userId
+            , ResultCallback<KickResponse> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.KickPartyMemberDetailedCallback(userId, callback);
@@ -398,9 +504,9 @@ namespace AccelByte.Api
         /// Invitation token of an incoming party invitation that will be declined.
         /// </param>
         /// <param name="callback">Returns a Result via callback when completed.</param>
-        public void RejectPartyInvitation( string partyId
+        public void RejectPartyInvitation(string partyId
             , string invitationToken
-            , ResultCallback<PartyRejectResponse> callback )
+            , ResultCallback<PartyRejectResponse> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.RejectPartyInvitation(partyId, invitationToken, callback);
@@ -415,7 +521,7 @@ namespace AccelByte.Api
             Report.GetFunctionLog(GetType().Name);
             websocketApi.GeneratePartyCode(callback);
         }
-        
+
         /// <summary>
         /// Get party code
         /// </summary>
@@ -425,7 +531,7 @@ namespace AccelByte.Api
             Report.GetFunctionLog(GetType().Name);
             websocketApi.GetPartyCode(callback);
         }
-        
+
         /// <summary>
         /// Remove party invite code
         /// </summary>
@@ -449,18 +555,38 @@ namespace AccelByte.Api
         /// <summary> Promote member to be a party leader.</summary>
         /// <param name="userId">User ID that will be promoted as a party leader.</param>
         /// <param name="callback">Returns a Result via callback when completed.</param>
-        public void PromotePartyLeader( string userId
-            , ResultCallback<PartyPromoteLeaderResponse> callback )
+        public void PromotePartyLeader(string userId
+            , ResultCallback<PartyPromoteLeaderResponse> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.PromotePartyLeader(userId, callback);
         }
 
+        /// <summary>
+        /// Set party member size limit
+        /// </summary>
+        /// <param name="partyId">designated party id</param>
+        /// <param name="limit">member limit</param>
+        /// <param name="callback">returns a Result via callback when completed</param>
         public void SetPartySizeLimit(string partyId, int limit, ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
 
             coroutineRunner.Run(api.SetPartySizeLimit(partyId, limit, callback));
+        }
+
+        /// <summary>
+        /// Send notification to party member 
+        /// </summary>
+        /// <param name="topic">Topic The topic of the request. Can use this as ID to know how to marshal the payload</param>
+        /// <param name="payload">Payload The Payload of the request. Can be JSON string</param>
+        /// <param name="callback">
+        /// Returns a Result that contains PartySendNotifResponse via callback when completed.
+        /// </param>
+        public void SendNotificationToPartyMember(string topic, string payload, ResultCallback<PartySendNotifResponse> callback )
+        {
+            Report.GetFunctionLog(GetType().Name);
+            websocketApi.SendNotificationToPartyMember(topic, payload, callback);
         }
         #endregion Party
 
@@ -470,8 +596,8 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="chatMessage">Message to send to party</param>
         /// <param name="callback">Returns a Result via callback when completed</param>
-        public void SendPartyChat( string chatMessage
-            , ResultCallback callback )
+        public void SendPartyChat(string chatMessage
+            , ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.SendPartyChat(chatMessage, callback);
@@ -483,13 +609,14 @@ namespace AccelByte.Api
         /// <param name="userId">Friend user id</param>
         /// <param name="chatMessage">Message to send to friend</param>
         /// <param name="callback">Returns a Result via callback when completed</param>
-        public void SendPersonalChat( string userId
+        public void SendPersonalChat(string userId
             , string chatMessage
-            , ResultCallback callback )
+            , ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.SendPersonalChat(userId, chatMessage, callback);
         }
+
         /// <summary>
         /// Send Join default global chat channel request.
         /// </summary>
@@ -522,9 +649,9 @@ namespace AccelByte.Api
         /// <param name="status">User status (Online, Available, Busy, Invisible)</param>
         /// <param name="activity">Describe an activity of the user, could be anything.</param>
         /// <param name="callback">Returns a Result via callback when completed.</param>
-        public void SetUserStatus( UserStatus status
+        public void SetUserStatus(UserStatus status
             , string activity
-            , ResultCallback callback )
+            , ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.SetUserStatus(status, activity, callback);
@@ -536,7 +663,7 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Returns a Result that contains Friends Status via callback when completed.
         /// </param>
-        public void ListFriendsStatus( ResultCallback<FriendsStatus> callback )
+        public void ListFriendsStatus(ResultCallback<FriendsStatus> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.ListFriendsStatus(callback);
@@ -549,7 +676,7 @@ namespace AccelByte.Api
         /// </summary> 
         /// <param name="callback">Returns a Result via callback when completed.</param>
         [Obsolete("Lobby 2.4.0 and above dropped support for this function")]
-        public void PullAsyncNotifications( ResultCallback callback )
+        public void PullAsyncNotifications(ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.PullAsyncNotifications(callback);
@@ -562,8 +689,8 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="userId">Targeted user ID.</param>
         /// <param name="callback">Returns a Result via callback when completed.</param>
-        public void RequestFriend( string userId
-            , ResultCallback callback )
+        public void RequestFriend(string userId
+            , ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.RequestFriend(userId, callback);
@@ -586,8 +713,8 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="userIds">Targeted user ID.</param>
         /// <param name="callback">Returns a Result via callback when completed.</param>
-        public void BulkRequestFriend( string[] userIds
-            , ResultCallback callback )
+        public void BulkRequestFriend(string[] userIds
+            , ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
 
@@ -596,7 +723,8 @@ namespace AccelByte.Api
                 callback.TryError(ErrorCode.IsNotLoggedIn);
                 return;
             }
-            BulkFriendsRequest otherUserIds = new BulkFriendsRequest{ friendIds = userIds };
+
+            BulkFriendsRequest otherUserIds = new BulkFriendsRequest { friendIds = userIds };
             coroutineRunner.Run(
                 api.BulkFriendRequest(
                     session.UserId,
@@ -609,8 +737,8 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="userId">Targeted user ID.</param>
         /// <param name="callback">Returns a Result via callback when completed.</param>
-        public void Unfriend( string userId
-            , ResultCallback callback )
+        public void Unfriend(string userId
+            , ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.Unfriend(userId, callback);
@@ -622,7 +750,7 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Returns a Result that contains Friends via callback when completed.
         /// </param>
-        public void ListOutgoingFriends( ResultCallback<Friends> callback )
+        public void ListOutgoingFriends(ResultCallback<Friends> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.ListOutgoingFriends(callback);
@@ -633,8 +761,8 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="userId">Targeted user ID.</param>
         /// <param name="callback">Returns a Result via callback when completed.</param>
-        public void CancelFriendRequest( string userId
-            , ResultCallback callback )
+        public void CancelFriendRequest(string userId
+            , ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.CancelFriendRequest(userId, callback);
@@ -646,7 +774,7 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Returns a Result that contains Friends via callback when completed.
         /// </param>
-        public void ListIncomingFriends( ResultCallback<Friends> callback )
+        public void ListIncomingFriends(ResultCallback<Friends> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.ListIncomingFriends(callback);
@@ -657,8 +785,8 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="userId">Targeted user ID.</param>
         /// <param name="callback">Result of the function.</param>
-        public void AcceptFriend( string userId
-            , ResultCallback callback )
+        public void AcceptFriend(string userId
+            , ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.AcceptFriend(userId, callback);
@@ -669,8 +797,8 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="userId">Targeted user ID.</param>
         /// <param name="callback">Result of the function.</param>
-        public void RejectFriend( string userId
-            , ResultCallback callback )
+        public void RejectFriend(string userId
+            , ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.RejectFriend(userId, callback);
@@ -682,7 +810,7 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Returns a Result that contains Friends via callback when completed.
         /// </param>
-        public void LoadFriendsList( ResultCallback<Friends> callback )
+        public void LoadFriendsList(ResultCallback<Friends> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.LoadFriendsList(callback);
@@ -695,8 +823,8 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Returns a Result that contains FriendshipStatus via callback when completed.
         /// </param>
-        public void GetFriendshipStatus( string userId
-            , ResultCallback<FriendshipStatus> callback )
+        public void GetFriendshipStatus(string userId
+            , ResultCallback<FriendshipStatus> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.GetFriendshipStatus(userId, callback);
@@ -709,9 +837,9 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Returns a Result that contains BulkUserStatusNotif via callback when completed.
         /// </param>
-        public void BulkGetUserPresence( string[] userIds
+        public void BulkGetUserPresence(string[] userIds
             , ResultCallback<BulkUserStatusNotif> callback
-            , bool countOnly = false )
+            , bool countOnly = false)
         {
             Report.GetFunctionLog(GetType().Name);
 
@@ -737,8 +865,8 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Result of the function with a start matchmaking status code.
         /// </param>
-        public void StartMatchmaking( string gameMode
-            , ResultCallback<MatchmakingCode> callback )
+        public void StartMatchmaking(string gameMode
+            , ResultCallback<MatchmakingCode> callback)
         {
             StartMatchmaking(
                 gameMode,
@@ -757,9 +885,9 @@ namespace AccelByte.Api
         /// <param name="gameMode">Target matchmaking game mode</param>
         /// <param name="serverName">Server name to do match in Local DS</param>
         /// <param name="callback">Result of the function with a start matchmaking status code.</param>
-        public void StartMatchmaking( string gameMode
+        public void StartMatchmaking(string gameMode
             , string serverName
-            , ResultCallback<MatchmakingCode> callback )
+            , ResultCallback<MatchmakingCode> callback)
         {
             StartMatchmaking(
                 gameMode,
@@ -779,10 +907,10 @@ namespace AccelByte.Api
         /// <param name="serverName">Server name to do match in Local DS</param>
         /// <param name="clientVersion">Game client version to ensure match with the same version</param>
         /// <param name="callback">Result of the function with a start matchmaking status code.</param>
-        public void StartMatchmaking( string gameMode
+        public void StartMatchmaking(string gameMode
             , string serverName
             , string clientVersion
-            , ResultCallback<MatchmakingCode> callback )
+            , ResultCallback<MatchmakingCode> callback)
         {
             StartMatchmaking(
                 gameMode,
@@ -802,10 +930,10 @@ namespace AccelByte.Api
         /// <param name="clientVersion">Game client version to ensure match with the same version</param>
         /// <param name="latencies">Server latencies based on regions</param>
         /// <param name="callback">Result of the function with a start matchmaking status code.</param>
-        public void StartMatchmaking( string gameMode
+        public void StartMatchmaking(string gameMode
             , string clientVersion
             , Dictionary<string, int> latencies
-            , ResultCallback<MatchmakingCode> callback )
+            , ResultCallback<MatchmakingCode> callback)
         {
             StartMatchmaking(
                 gameMode,
@@ -826,11 +954,11 @@ namespace AccelByte.Api
         /// <param name="latencies">Server latencies based on regions</param>
         /// <param name="partyAttributes">Matchmaker will match party with the same party attributes</param>
         /// <param name="callback">Result of the function with a start matchmaking status code.</param>
-        public void StartMatchmaking( string gameMode
+        public void StartMatchmaking(string gameMode
             , string clientVersion
             , Dictionary<string, int> latencies
             , Dictionary<string, object> partyAttributes
-            , ResultCallback<MatchmakingCode> callback )
+            , ResultCallback<MatchmakingCode> callback)
         {
             StartMatchmaking(
                 gameMode,
@@ -855,12 +983,12 @@ namespace AccelByte.Api
         /// Temporary party will disband when matchmaking finishes.
         /// </param>
         /// <param name="callback">Result of the function with a start matchmaking status code.</param>
-        public void StartMatchmaking( string gameMode
+        public void StartMatchmaking(string gameMode
             , string clientVersion
             , Dictionary<string, int> latencies
             , Dictionary<string, object> partyAttributes
             , string[] tempPartyUserIds
-            , ResultCallback<MatchmakingCode> callback )
+            , ResultCallback<MatchmakingCode> callback)
         {
             StartMatchmaking(
                 gameMode,
@@ -886,13 +1014,13 @@ namespace AccelByte.Api
         /// </param>
         /// <param name="extraAttributes">Custom attributes defined in game mode's matching/flexing rule</param>
         /// <param name="callback">Result of the function with a start matchmaking status code.</param>
-        public void StartMatchmaking( string gameMode
+        public void StartMatchmaking(string gameMode
             , string clientVersion
             , Dictionary<string, int> latencies
             , Dictionary<string, object> partyAttributes
             , string[] tempPartyUserIds
             , string[] extraAttributes
-            , ResultCallback<MatchmakingCode> callback )
+            , ResultCallback<MatchmakingCode> callback)
         {
             StartMatchmaking(
                 gameMode,
@@ -917,11 +1045,11 @@ namespace AccelByte.Api
         /// matchmake with other party's party attribute
         /// </param>
         /// <param name="callback">Result of the function with a start matchmaking status code.</param>
-        public void StartMatchmaking( string gameMode
+        public void StartMatchmaking(string gameMode
             , string serverName
             , string clientVersion
             , Dictionary<string, object> partyAttributes
-            , ResultCallback<MatchmakingCode> callback )
+            , ResultCallback<MatchmakingCode> callback)
         {
             StartMatchmaking(
                 gameMode,
@@ -946,12 +1074,12 @@ namespace AccelByte.Api
         /// Temporary party will disband when matchmaking finishes.
         /// </param>
         /// <param name="callback">Result of the function with a start matchmaking status code.</param>
-        public void StartMatchmaking( string gameMode
+        public void StartMatchmaking(string gameMode
             , string serverName
             , string clientVersion
             , Dictionary<string, object> partyAttributes
             , string[] tempPartyUserIds
-            , ResultCallback<MatchmakingCode> callback )
+            , ResultCallback<MatchmakingCode> callback)
         {
             StartMatchmaking(
                 gameMode,
@@ -977,13 +1105,13 @@ namespace AccelByte.Api
         /// <param name="extraAttributes">Custom attributes defined in game mode's matching/flexing rule
         /// </param>
         /// <param name="callback">Result of the function with a start matchmaking status code.</param>
-        public void StartMatchmaking( string gameMode
+        public void StartMatchmaking(string gameMode
             , string serverName
             , string clientVersion
             , Dictionary<string, object> partyAttributes
             , string[] tempPartyUserIds
             , string[] extraAttributes
-            , ResultCallback<MatchmakingCode> callback )
+            , ResultCallback<MatchmakingCode> callback)
         {
             StartMatchmaking(
                 gameMode,
@@ -1010,14 +1138,14 @@ namespace AccelByte.Api
         /// </param>
         /// <param name="extraAttributes">Custom attributes defined in game mode's matching/flexing rule</param>
         /// <param name="callback">Result of the function with a start matchmaking status code.</param>
-        public void StartMatchmaking( string gameMode
+        public void StartMatchmaking(string gameMode
             , string serverName
             , string clientVersion
             , Dictionary<string, int> latencies
             , Dictionary<string, object> partyAttributes
             , string[] tempPartyUserIds
             , string[] extraAttributes
-            , ResultCallback<MatchmakingCode> callback )
+            , ResultCallback<MatchmakingCode> callback)
         {
             MatchmakingOptionalParam param = new MatchmakingOptionalParam
             {
@@ -1038,24 +1166,35 @@ namespace AccelByte.Api
         /// <param name="gameMode"></param>
         /// <param name="callback"></param>
         /// <param name="param"></param>
-        public void StartMatchmaking( string gameMode
+        public void StartMatchmaking(string gameMode
             , MatchmakingOptionalParam param
-            , ResultCallback<MatchmakingCode> callback )
+            , ResultCallback<MatchmakingCode> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.StartMatchmaking(gameMode, param, callback);
         }
-        
+
         /// <summary>
         /// Send a message to matchmaking service to indicate the user is ready for match
         /// </summary>
         /// <param name="matchId"></param>
         /// <param name="callback"></param>
-        public void ConfirmReadyForMatch( string matchId
-            , ResultCallback callback )
+        public void ConfirmReadyForMatch(string matchId
+            , ResultCallback callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.ConfirmReadyForMatch(matchId, callback);
+        }
+
+        /// <summary>
+        /// Reject match that was found.
+        /// </summary>
+        /// <param name="matchId"></param>
+        /// <param name="callback"></param>
+        public void RejectMatch(string matchId, ResultCallback callback)
+        {
+            Report.GetFunctionLog(GetType().Name);
+            websocketApi.RejectMatch(matchId, callback);
         }
 
         /// <summary>
@@ -1065,8 +1204,8 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Result of the function with a cancel matchmaking status code.
         /// </param>
-        public void CancelMatchmaking( string gameMode
-            , ResultCallback<MatchmakingCode> callback )
+        public void CancelMatchmaking(string gameMode
+            , ResultCallback<MatchmakingCode> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.CancelMatchmaking(gameMode, callback);
@@ -1080,9 +1219,9 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// Result of the function with a cancel matchmaking status code.
         /// </param>
-        public void CancelMatchmaking( string gameMode
+        public void CancelMatchmaking(string gameMode
             , bool isTempParty
-            , ResultCallback<MatchmakingCode> callback )
+            , ResultCallback<MatchmakingCode> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.CancelMatchmaking(gameMode, isTempParty, callback);
@@ -1104,10 +1243,10 @@ namespace AccelByte.Api
         /// <summary>Get party storage by party ID.</summary>
         /// <param name="partyId">Targeted party ID.</param>
         /// <param name="callback">Returns a Result via callback when completed.</param>
-        public void GetPartyStorage( string partyId
-            , ResultCallback<PartyDataUpdateNotif> callback )
+        public void GetPartyStorage(string partyId
+            , ResultCallback<PartyDataUpdateNotif> callback)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(partyId), 
+            Assert.IsFalse(string.IsNullOrEmpty(partyId),
                 "Party ID should not be null.");
 
             Report.GetFunctionLog(GetType().Name);
@@ -1117,6 +1256,7 @@ namespace AccelByte.Api
                 callback.TryError(ErrorCode.IsNotLoggedIn);
                 return;
             }
+
             coroutineRunner.Run(
                 api.GetPartyStorage(
                     partyId,
@@ -1137,12 +1277,12 @@ namespace AccelByte.Api
         /// the number of retry to do when there is an error in writing to party storage
         /// (likely due to write conflicts).
         /// </param>
-        public void WritePartyStorage( string partyId
+        public void WritePartyStorage(string partyId
             , ResultCallback<PartyDataUpdateNotif> callback
             , Func<Dictionary<string, object>, Dictionary<string, object>> payloadModifier
-            , int retryAttempt = 1 )
+            , int retryAttempt = 1)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(partyId), 
+            Assert.IsFalse(string.IsNullOrEmpty(partyId),
                 "Party ID should not be null.");
 
             Report.GetFunctionLog(GetType().Name);
@@ -1156,14 +1296,14 @@ namespace AccelByte.Api
             WritePartyStorageRecursive(retryAttempt, partyId, callback, payloadModifier);
         }
 
-        private void WritePartyStorageRecursive( int remainingAttempt
+        private void WritePartyStorageRecursive(int remainingAttempt
             , string partyId
             , ResultCallback<PartyDataUpdateNotif> callback
-            , Func<Dictionary<string, object>, Dictionary<string, object>> payloadModifier )
+            , Func<Dictionary<string, object>, Dictionary<string, object>> payloadModifier)
         {
             if (remainingAttempt <= 0)
             {
-                callback.TryError(new Error(ErrorCode.PreconditionFailed, 
+                callback.TryError(new Error(ErrorCode.PreconditionFailed,
                     "Exhaust all retry attempt to modify party storage. Please try again."));
                 return;
             }
@@ -1192,7 +1332,7 @@ namespace AccelByte.Api
                             {
                                 WritePartyStorageRecursive(
                                     remainingAttempt - 1,
-                                    partyId, 
+                                    partyId,
                                     callback,
                                     payloadModifier);
                             }));
@@ -1219,8 +1359,8 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="userId">Blocked user's user ID</param>
         /// <param name="callback">Returns a result via callback when completed</param>
-        public void BlockPlayer( string userId
-            , ResultCallback<BlockPlayerResponse> callback )
+        public void BlockPlayer(string userId
+            , ResultCallback<BlockPlayerResponse> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.BlockPlayer(userId, callback);
@@ -1243,15 +1383,18 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="userId">Unblocked user's user ID</param>
         /// <param name="callback">Returns a result via callback when completed</param>
-        public void UnblockPlayer( string userId
-            , ResultCallback<UnblockPlayerResponse> callback )
+        public void UnblockPlayer(string userId
+            , ResultCallback<UnblockPlayerResponse> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.UnblockPlayer(userId, callback);
         }
 
-        
-        public void GetListOfBlockedUser( ResultCallback<BlockedList> callback )
+        /// <summary>
+        /// get current logged in user's blocked list.
+        /// </summary>
+        /// <param name="callback">Returns a result via callback when complete</param>
+        public void GetListOfBlockedUser(ResultCallback<BlockedList> callback)
         {
             Report.GetFunctionLog(GetType().Name);
 
@@ -1260,14 +1403,19 @@ namespace AccelByte.Api
                 callback.TryError(ErrorCode.IsNotLoggedIn);
                 return;
             }
+
             coroutineRunner.Run(
                 api.GetListOfBlockedUser(
                     session.UserId,
                     callback));
         }
 
-        
-        public void GetListOfBlocker( ResultCallback<BlockerList> callback )
+
+        /// <summary>
+        /// Get users that currently blocking the user logged in.
+        /// </summary>
+        /// <param name="callback">Returns a result via callback when complete</param>
+        public void GetListOfBlocker(ResultCallback<BlockerList> callback)
         {
             Report.GetFunctionLog(GetType().Name);
 
@@ -1276,14 +1424,20 @@ namespace AccelByte.Api
                 callback.TryError(ErrorCode.IsNotLoggedIn);
                 return;
             }
+
             coroutineRunner.Run(
-               api.GetListOfBlocker(
+                api.GetListOfBlocker(
                     session.UserId,
                     callback));
         }
         #endregion BlockUnblock
 
         #region ProfanityFilter
+        /// <summary>
+        /// Set chat profanity filter level
+        /// </summary>
+        /// <param name="level">level of profanity filter to apply</param>
+        /// <param name="callback">Returns a result via callback when complete</param>
         public void SetProfanityFilterLevel( ProfanityFilterLevel level
             , ResultCallback callback )
         {
@@ -1293,6 +1447,12 @@ namespace AccelByte.Api
         #endregion ProfanityFilter
 
         #region SessionAttribute
+        /// <summary>
+        /// Set user's lobby session attributes.
+        /// </summary>
+        /// <param name="key">Attribute key</param>
+        /// <param name="value">Attribute value</param>
+        /// <param name="callback">Returns a result via callback when complete</param>
         public void SetSessionAttribute( string key
             , string value
             , ResultCallback callback )
@@ -1302,6 +1462,11 @@ namespace AccelByte.Api
             websocketApi.SetSessionAttribute(key, value, callback);
         }
 
+        /// <summary>
+        /// Get user's lobby session attributes.
+        /// </summary>
+        /// <param name="key">Attribute key</param>
+        /// <param name="callback">Returns a result via callback when complete</param>
         public void GetSessionAttribute(string key, ResultCallback<GetSessionAttributeResponse> callback)
         {
             Report.GetFunctionLog(GetType().Name);
@@ -1309,7 +1474,11 @@ namespace AccelByte.Api
             websocketApi.GetSessionAttribute(key, callback);
         }
 
-        public void GetSessionAttributeAll( ResultCallback<GetSessionAttributeAllResponse> callback )
+        /// <summary>
+        /// Get all of the user's lobby session attributes.
+        /// </summary>
+        /// <param name="callback">Returns a result via callback when complete</param>
+        public void GetSessionAttributeAll(ResultCallback<GetSessionAttributeAllResponse> callback)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.GetSessionAttributeAll(callback);
@@ -1322,8 +1491,8 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="userId">The recipient's user ID.</param>
         /// <param name="message">Signaling message to be sent.</param>
-        public void SendSignalingMessage( string userId
-            , string message )
+        public void SendSignalingMessage(string userId
+            , string message)
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.SendSignalingMessage(userId, message);
@@ -1331,6 +1500,11 @@ namespace AccelByte.Api
         #endregion Signaling
 
         #region Token
+        /// <summary>
+        /// Refresh the access token to be used in lobby.
+        /// </summary>
+        /// <param name="newAccessToken">new access token to user in lobby</param>
+        /// <param name="callback">Returns a result via callback when complete</param>
         private void RefreshToken( string newAccessToken
             , ResultCallback callback )
         {
@@ -1343,7 +1517,7 @@ namespace AccelByte.Api
         {
             // debug ws connection
 #if DEBUG
-            AccelByteDebug.Log("[WS] Connection open");
+            AccelByteDebug.LogVerbose("[WS] Connection open");
 #endif
             Action handler = Connected;
 
@@ -1358,27 +1532,27 @@ namespace AccelByte.Api
             }
         }
 
-        private void LoginSession_RefreshTokenCallback( string accessToken )
+        private void LoginSession_RefreshTokenCallback(string accessToken)
         {
             RefreshToken(accessToken, result =>
             {
                 TokenRefreshed?.Invoke();
-                
-                string resultMsg = result.IsError 
-                    ? $"Error with code {result.Error.Code}, message {result.Error.Message}" 
+
+                string resultMsg = result.IsError
+                    ? $"Error with code {result.Error.Code}, message {result.Error.Message}"
                     : "Success";
                 AccelByteDebug.Log($"Updating access token in lobby {resultMsg}");
             });
         }
 
-        private void HandleOnClose( ushort closecode )
+        private void HandleOnClose(ushort closecode)
         {
             // debug ws connection
 #if DEBUG
-            AccelByteDebug.Log("[WS] Connection close: " + closecode);
+            AccelByteDebug.LogVerbose("[WS] Connection close: " + closecode);
 #endif
             var code = (WsCloseCode)closecode;
-            
+
             if (session != null)
             {
                 session.RefreshTokenCallback -= LoginSession_RefreshTokenCallback;
@@ -1397,13 +1571,14 @@ namespace AccelByte.Api
         {
             Random rand = new Random();
             float randomFloat = (float)(rand.NextDouble());
-            
-            yield return new WaitForSeconds((backoffDelay + 
-                ((randomFloat * 0.5f) - 0.5f)) / 1000);
+
+            yield return new WaitForSeconds((backoffDelay +
+                                             ((randomFloat * 0.5f) - 0.5f)) / 1000);
 
             Connect();
         }
-        private void HandleOnMessage( string message )
+
+        private void HandleOnMessage(string message)
         {
             Report.GetWebSocketResponse(message);
 
@@ -1413,138 +1588,290 @@ namespace AccelByte.Api
 
             switch (messageType)
             {
-            case MessageType.partyGetInvitedNotif:
-                websocketApi.HandleNotification(message, InvitedToParty);
-
-                break;
-            case MessageType.partyJoinNotif:
-                websocketApi.HandleNotification(message, JoinedParty);
-
-                break;
-            case MessageType.partyKickNotif:
-                websocketApi.HandleNotification(message, KickedFromParty);
-
-                break;
-            case MessageType.partyLeaveNotif:
-                websocketApi.HandleNotification(message, LeaveFromParty);
-
-                break;
-            case MessageType.personalChatNotif:
-                websocketApi.HandleNotification(message, PersonalChatReceived);
-
-                break;
-            case MessageType.partyChatNotif:
-                websocketApi.HandleNotification(message, PartyChatReceived);
-
-                break;
-            case MessageType.messageNotif:
-                websocketApi.HandleNotification(message, OnNotification);
-
-                break;
-            case MessageType.userStatusNotif:
-                websocketApi.HandleNotification(message, FriendsStatusChanged);
-
-                break;
-            case MessageType.matchmakingNotif:
-                websocketApi.HandleNotification(message, MatchmakingCompleted);
-
-                break;
-            case MessageType.dsNotif:
-                websocketApi.HandleNotification(message, DSUpdated);
-
-                break;
-            case MessageType.acceptFriendsNotif:
-                websocketApi.HandleNotification(message, FriendRequestAccepted);
-
-                break;
-            case MessageType.requestFriendsNotif:
-                websocketApi.HandleNotification(message, OnIncomingFriendRequest);
-
-                break;
-            case MessageType.unfriendNotif:
-                websocketApi.HandleNotification(message, OnUnfriend);
-
-                break;
-            case MessageType.cancelFriendsNotif:
-                websocketApi.HandleNotification(message, FriendRequestCanceled);
-
-                break;
-            case MessageType.rejectFriendsNotif:
-                websocketApi.HandleNotification(message, FriendRequestRejected);
-
-                break;
-            case MessageType.setReadyConsentNotif:
-                websocketApi.HandleNotification(message, ReadyForMatchConfirmed);
-
-                break;
-            case MessageType.rematchmakingNotif:
-                websocketApi.HandleNotification(message, RematchmakingNotif);
-
-                break;
-            case MessageType.channelChatNotif:
-                websocketApi.HandleNotification(message, ChannelChatReceived);
-
-                break;
-            case MessageType.connectNotif:
-                AwesomeFormat.ReadPayload(message, out LobbySessionId lobbySessionId);
-                websocketApi.SetSessionId(lobbySessionId.lobbySessionID);
-                break;
-            case MessageType.disconnectNotif:
-                websocketApi.HandleNotification(message, Disconnecting);
-                break;
-            case MessageType.partyDataUpdateNotif:
-                websocketApi.HandleNotification(message, PartyDataUpdateNotif);
-                break;
-            case MessageType.partyRejectNotif:
-                websocketApi.HandleNotification(message, RejectedPartyInvitation);
-                break;
-            case MessageType.blockPlayerNotif:
-                websocketApi.HandleNotification(message, PlayerBlockedNotif);
-                break;
-            case MessageType.unblockPlayerNotif:
-                websocketApi.HandleNotification(message, PlayerUnblockedNotif);
-                break;
-            case MessageType.userBannedNotification:
-                websocketApi.HandleNotification(message, UserBannedNotification);
-                break;
-            case MessageType.userUnbannedNotification:
-                websocketApi.HandleNotification(message, UserUnbannedNotification);
-                break;
-            case MessageType.signalingP2PNotif:
-                websocketApi.HandleNotification(message, this.SignalingP2PNotification);
-                break;
-            default:
-                websocketApi.HandleResponse(messageId, message, errorCode);
-                break;
-            }
-
-            if (messageType == MessageType.userBannedNotification 
-                || messageType == MessageType.userUnbannedNotification)
-            {
-                coroutineRunner.Run(() =>
-                {
+                case MessageType.messageSessionNotif:
+                    AwesomeFormat.ReadPayload(message, out Notification sessionNotification);
+                    if (!Enum.TryParse<MultiplayerV2NotifType>(sessionNotification.topic, true,
+                            out MultiplayerV2NotifType sessionV2NotificationType))
+                    {
+                        AccelByteDebug.LogError(
+                            $"Error {ErrorCode.ErrorFromException}: SessionV2 notification topic not recognized: {sessionNotification.topic}");
+                        return;
+                    }
+                    HandleMultiplayerV2Notification(message, sessionV2NotificationType);
+                    break;
+                case MessageType.partyGetInvitedNotif:
+                    websocketApi.HandleNotification(message, InvitedToParty);
+                    break;
+                case MessageType.partyJoinNotif:
+                    websocketApi.HandleNotification(message, JoinedParty);
+                    break;
+                case MessageType.partyKickNotif:
+                    websocketApi.HandleNotification(message, KickedFromParty);
+                    break;
+                case MessageType.partyLeaveNotif:
+                    websocketApi.HandleNotification(message, LeaveFromParty);
+                    break;
+                case MessageType.personalChatNotif:
+                    websocketApi.HandleNotification(message, PersonalChatReceived);
+                    break;
+                case MessageType.partyChatNotif:
+                    websocketApi.HandleNotification(message, PartyChatReceived);
+                    break;
+                case MessageType.messageNotif:
+                    AwesomeFormat.ReadPayload(message, out Notification notification);
+                    if (Enum.TryParse<MultiplayerV2NotifType>(notification.topic, true,
+                            out MultiplayerV2NotifType matchmakingV2NotificationType))
+                    {
+                        HandleMultiplayerV2Notification(message, matchmakingV2NotificationType);
+                    }
+                    else
+                    {
+                        websocketApi.HandleNotification(message, OnNotification);
+                    }
+                    break;
+                case MessageType.userStatusNotif:
+                    websocketApi.HandleUserStatusNotif(message, FriendsStatusChanged);
+                    break;
+                case MessageType.matchmakingNotif:
+                    websocketApi.HandleNotification(message, MatchmakingCompleted);
+                    break;
+                case MessageType.dsNotif:
+                    websocketApi.HandleNotification(message, DSUpdated);
+                    break;
+                case MessageType.acceptFriendsNotif:
+                    websocketApi.HandleNotification(message, FriendRequestAccepted);
+                    break;
+                case MessageType.requestFriendsNotif:
+                    websocketApi.HandleNotification(message, OnIncomingFriendRequest);
+                    break;
+                case MessageType.unfriendNotif:
+                    websocketApi.HandleNotification(message, OnUnfriend);
+                    break;
+                case MessageType.cancelFriendsNotif:
+                    websocketApi.HandleNotification(message, FriendRequestCanceled);
+                    break;
+                case MessageType.rejectFriendsNotif:
+                    websocketApi.HandleNotification(message, FriendRequestRejected);
+                    break;
+                case MessageType.setReadyConsentNotif:
+                    websocketApi.HandleNotification(message, ReadyForMatchConfirmed);
+                    break;
+                case MessageType.rematchmakingNotif:
+                    websocketApi.HandleNotification(message, RematchmakingNotif);
+                    break;
+                case MessageType.channelChatNotif:
+                    websocketApi.HandleNotification(message, ChannelChatReceived);
+                    break;
+                case MessageType.connectNotif:
+                    AwesomeFormat.ReadPayload(message, out LobbySessionId lobbySessionId);
+                    websocketApi.SetSessionId(lobbySessionId.lobbySessionID);
+                    break;
+                case MessageType.disconnectNotif:
+                    websocketApi.HandleNotification(message, Disconnecting);
+                    break;
+                case MessageType.partyDataUpdateNotif:
+                    websocketApi.HandleNotification(message, PartyDataUpdateNotif);
+                    break;
+                case MessageType.partyNotif:
+                    websocketApi.HandleNotification(message, PartyNotif);
+                    break;
+                case MessageType.partyRejectNotif:
+                    websocketApi.HandleNotification(message, RejectedPartyInvitation);
+                    break;
+                case MessageType.blockPlayerNotif:
+                    websocketApi.HandleNotification(message, PlayerBlockedNotif);
+                    break;
+                case MessageType.unblockPlayerNotif:
+                    websocketApi.HandleNotification(message, PlayerUnblockedNotif);
+                    break;
+                case MessageType.userBannedNotification:
+                    websocketApi.HandleNotification(message, UserBannedNotification);
                     HandleBanNotification();
-                });
+                    break;
+                case MessageType.userUnbannedNotification:
+                    websocketApi.HandleNotification(message, UserUnbannedNotification);
+                    HandleUnbanNotification();
+                    break;
+                case MessageType.signalingP2PNotif:
+                    websocketApi.HandleNotification(message, this.SignalingP2PNotification);
+                    break;
+                case MessageType.setRejectConsentNotif:
+                    websocketApi.HandleNotification(message, MatchRejected);
+                    break;
+                default:
+                    websocketApi.HandleResponse(messageId, message, errorCode);
+                    break;
             }
         }
 
         private void HandleBanNotification()
         {
-            Report.GetFunctionLog(GetType().Name);
             reconnectsOnBans = true;
-            
+        }
+
+        private void HandleUnbanNotification()
+        {
+            reconnectsOnBans = false;
+
             if (session != null)
             {
                 session.RefreshTokenCallback -= LoginSession_RefreshTokenCallback;
             }
 
-            api.OnBanNotificationReceived(UpdateAuthToken);
+            api.OnBanNotificationReceived((newAccessToken) => 
+            { 
+                UpdateAuthToken(newAccessToken);
+                if (session != null)
+                {
+                    session.RefreshTokenCallback += LoginSession_RefreshTokenCallback;
+                }
+            });
         }
 
-        private void UpdateAuthToken( string inNewSession )
+        private void UpdateAuthToken(string newSessionAuthToken)
         {
             Report.GetFunctionLog(GetType().Name);
-            session.AuthorizationToken = inNewSession;
+            session.AuthorizationToken = newSessionAuthToken;
+        }
+
+        private void HandleMultiplayerV2Notification(string message, MultiplayerV2NotifType notificationType)
+        {
+            // Report.GetProtobufNotification(message);
+
+            Notification notification;
+            ErrorCode errorCode = AwesomeFormat.ReadPayload(message, out notification);
+
+            if (errorCode != ErrorCode.None)
+            {
+                Debug.LogError($"Error {errorCode}: Failed to read payload of MultiplayerV2 notification");
+                return;
+            }
+
+            var notificationPayload = notification.payload.Trim();
+
+            // Pad the payload with "=" if length is not divisible by 4
+            if (notificationPayload.Length % 4 != 0)
+            {
+                notificationPayload = notification.payload.PadRight(
+                    notificationPayload.Length + 4 - notificationPayload.Length % 4, '=');
+            }
+
+            byte[] payloadBytes;
+            try
+            {
+                payloadBytes = Convert.FromBase64String(notificationPayload);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(
+                    $"Error {ErrorCode.ErrorFromException}: Failed to decode MultiplayerV2 notification from Base64: {notificationPayload}");
+                return;
+            }
+
+            // var notificationEventEnvelope = Accelbyte.Proto.Session.NotificationEventEnvelope.Parser.ParseFrom(payloadString);
+            var jsonString = Encoding.UTF8.GetString(payloadBytes);
+
+            switch (notificationType)
+            {
+                case MultiplayerV2NotifType.OnPartyInvited:
+                    var partyNotificationUserInvited =
+                        JsonConvert.DeserializeObject<SessionV2PartyInvitationNotification>(jsonString);
+                    websocketApi.DispatchNotification(partyNotificationUserInvited,
+                        SessionV2InvitedUserToParty);
+                    break;
+                case MultiplayerV2NotifType.OnPartyJoined:
+                    var partyNotificationUserJoined =
+                        JsonConvert.DeserializeObject<SessionV2PartyJoinedNotification>(jsonString);
+                    websocketApi.DispatchNotification(partyNotificationUserJoined,
+                        SessionV2UserJoinedParty);
+                    break;
+                case MultiplayerV2NotifType.OnPartyMembersChanged:
+                    var partyNotificationMembersChanged =
+                        JsonConvert.DeserializeObject<SessionV2PartyMembersChangedNotification>(jsonString);
+                    websocketApi.DispatchNotification(partyNotificationMembersChanged, SessionV2PartyMemberChanged);
+                    break;
+                case MultiplayerV2NotifType.OnPartyRejected:
+                    var partyNotificationUserReject =
+                        JsonConvert.DeserializeObject<SessionV2PartyInvitationRejectedNotification>(jsonString);
+                    websocketApi.DispatchNotification(partyNotificationUserReject,
+                        SessionV2UserRejectedPartyInvitation);
+                    break;
+                case MultiplayerV2NotifType.OnPartyKicked:
+                    var partyNotificationUserKicked =
+                        JsonConvert.DeserializeObject<SessionV2PartyUserKickedNotification>(jsonString);
+                    websocketApi.DispatchNotification(partyNotificationUserKicked,
+                        SessionV2UserKickedFromParty);
+                    break;
+                case MultiplayerV2NotifType.OnPartyUpdated:
+                    var partySession =
+                        JsonConvert.DeserializeObject<SessionV2PartySessionUpdatedNotification>(jsonString);
+                    websocketApi.DispatchNotification(partySession,
+                        SessionV2PartyUpdated);
+                    break;
+                case MultiplayerV2NotifType.OnSessionInvited:
+                    var gameSessionNotificationUserInvited =
+                        JsonConvert.DeserializeObject<SessionV2GameInvitationNotification>(jsonString);
+                    websocketApi.DispatchNotification(gameSessionNotificationUserInvited,
+                        SessionV2InvitedUserToGameSession);
+                    break;
+                case MultiplayerV2NotifType.OnSessionJoined:
+                    var gameSessionNotificationUserJoined =
+                        JsonConvert.DeserializeObject<SessionV2GameJoinedNotification>(jsonString);
+                    websocketApi.DispatchNotification(gameSessionNotificationUserJoined,
+                        SessionV2UserJoinedGameSession);
+                    break;
+                case MultiplayerV2NotifType.OnSessionKicked:
+                    var gameSessionNotificationUserKicked =
+                        JsonConvert.DeserializeObject<SessionV2GameUserKickedNotification>(jsonString);
+                    websocketApi.DispatchNotification(gameSessionNotificationUserKicked,
+                        SessionV2UserKickedFromGameSession);
+                    break;
+                case MultiplayerV2NotifType.OnSessionRejected:
+                    var gameSessionNotificationUserReject =
+                        JsonConvert.DeserializeObject<SessionV2GameInvitationRejectedNotification>(jsonString);
+                    websocketApi.DispatchNotification(gameSessionNotificationUserReject,
+                        SessionV2UserRejectedGameSessionInvitation);
+                    break;
+                case MultiplayerV2NotifType.OnSessionMembersChanged:
+                    var gameSessionNotificationMembersChanged =
+                        JsonConvert.DeserializeObject<SessionV2GameMembersChangedNotification>(jsonString);
+                    websocketApi.DispatchNotification(gameSessionNotificationMembersChanged,
+                        SessionV2GameSessionMemberChanged);
+                    break;
+                case MultiplayerV2NotifType.OnGameSessionUpdated:
+                    var gameSession =
+                        JsonConvert.DeserializeObject<SessionV2GameSessionUpdatedNotification>(jsonString);
+                    websocketApi.DispatchNotification(gameSession,
+                        SessionV2GameSessionUpdated);
+                    break;
+                case MultiplayerV2NotifType.OnDSStatusChanged:
+                    var dSStatusChangedNotification =
+                        JsonConvert.DeserializeObject<SessionV2DsStatusUpdatedNotification>(jsonString);
+                    websocketApi.DispatchNotification(dSStatusChangedNotification,
+                        SessionV2DsStatusChanged);
+                    break;
+                case MultiplayerV2NotifType.OnMatchFound:
+                    var matchFoundNotification =
+                        JsonConvert.DeserializeObject<MatchmakingV2MatchFoundNotification>(jsonString);
+                    websocketApi.DispatchNotification(matchFoundNotification,
+                        MatchmakingV2MatchFound);
+                    break;
+                case MultiplayerV2NotifType.OnMatchmakingStarted:
+                    var matchmakingStartedNotification =
+                        JsonConvert.DeserializeObject<MatchmakingV2MatchmakingStartedNotification>(jsonString);
+                    websocketApi.DispatchNotification(matchmakingStartedNotification,
+                        MatchmakingV2MatchmakingStarted);
+                    break;
+                case MultiplayerV2NotifType.OnMatchmakingTicketExpired:
+                    var ticketExpiredNotification =
+                        JsonConvert.DeserializeObject<MatchmakingV2TicketExpiredNotification>(jsonString);
+                    websocketApi.DispatchNotification(ticketExpiredNotification,
+                        MatchmakingV2TicketExpired);
+                    break;
+                default:
+                    Debug.LogError($"MultiplayerV2 notification type {notificationType} not supported");
+                    return;
+            }
         }
     }
 }

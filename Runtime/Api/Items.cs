@@ -105,8 +105,8 @@ namespace AccelByte.Api
         /// <param name="region">region of items</param>
         public void GetItemByAppId( string appId
             , ResultCallback<ItemInfo> callback
-            , string language = null
-            , string region = null )
+            , string language = ""
+            , string region = "" )
         {
             Report.GetFunctionLog(GetType().Name);
             Assert.IsNotNull(appId, "Can't get item by App ID; appId parameter is null!");
@@ -194,7 +194,7 @@ namespace AccelByte.Api
         /// <summary>
         /// Bulk Get Locale Items.
         /// </summary>
-        /// <param name="appId">AppId of an item</param>
+        /// <param name="itemIds">Item IDs to get item</param>
         /// <param name="callback">Returns a result that contain ItemInfo via callback when completed.</param>
         /// <param name="language">display language</param>
         /// <param name="region">region of items</param>

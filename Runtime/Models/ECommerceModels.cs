@@ -13,7 +13,7 @@ namespace AccelByte.Models
 {
     #region Enum
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum ItemType
     {
         NONE,
@@ -25,10 +25,11 @@ namespace AccelByte.Models
         SUBSCRIPTION,
         SEASON,
         OPTIONBOX,
-        MEDIA
+        MEDIA,
+        LOOTBOX
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum ItemStatus
     {
         NONE,
@@ -36,7 +37,7 @@ namespace AccelByte.Models
         INACTIVE
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum CurrencyType
     {
         NONE,
@@ -44,17 +45,20 @@ namespace AccelByte.Models
         VIRTUAL
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum EntitlementClazz
     {
         NONE,
         APP,
         ENTITLEMENT,
         CODE,
-        MEDIA
+        MEDIA,
+        SUBSCRIPTION,
+        OPTIONBOX,
+        LOOTBOX
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum EntitlementStatus
     {
         NONE,
@@ -64,7 +68,7 @@ namespace AccelByte.Models
         REVOKED
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum EntitlementAppType
     {
         NONE,
@@ -74,7 +78,7 @@ namespace AccelByte.Models
         DEMO
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum EntitlementType
     {
         NONE,
@@ -82,7 +86,7 @@ namespace AccelByte.Models
         CONSUMABLE
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum OrderStatus
     {
         NONE,
@@ -99,7 +103,7 @@ namespace AccelByte.Models
         DELETED
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum ItemSource
     {
         NONE,
@@ -112,7 +116,7 @@ namespace AccelByte.Models
         OTHER
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum EntitlementSource
     {
         NONE,
@@ -127,7 +131,7 @@ namespace AccelByte.Models
         OTHER
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum CreditUserWalletSource
     {
         PURCHASE,
@@ -140,14 +144,14 @@ namespace AccelByte.Models
         OTHER
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum SeasonType
     {
         PASS = 0,
         TIER
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum RewardSortBy
     {
         NAMESPACE,
@@ -158,14 +162,13 @@ namespace AccelByte.Models
         REWARDCODE_DESC
     }
 
-    [JsonConverter( typeof( StringEnumConverter ) )]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum WalletTable
     {
         Playstation = 0,
         Xbox,
         Steam,
-        Epic,
-        Stadia,
+        Epic, 
         IOS,
         GooglePlay,
         Twitch,
@@ -189,6 +192,14 @@ namespace AccelByte.Models
         EntitlementPredicate,
         SeasonPassPredicate,
         SeasonTierPredicate
+    }
+
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum RewardType
+    {
+        REWARD,
+        REWARD_GROUP,
+        PROBABILITY_GROUP
     }
 
     #endregion
@@ -243,7 +254,7 @@ namespace AccelByte.Models
         [DataMember] public int totalTimeLimitedBalance { get; set; }
         [DataMember] public ItemStatus status { get; set; }
     }
-    
+
     [DataContract]
     public class WalletInfoResponse
     {
@@ -288,7 +299,7 @@ namespace AccelByte.Models
         [DataMember] public string reason { get; set; }
         [DataMember] public WalletTable origin { get; set; }
     }
-    
+
     [DataContract]
     public class CreditUserWalletResponse
     {
@@ -400,6 +411,26 @@ namespace AccelByte.Models
     }
 
     [DataContract]
+    public class ItemCriteriaV2
+    {
+        [DataMember] public string storeId { get; set; }
+        [DataMember] public string categoryPath { get; set; }
+        [DataMember] public bool includeSubCategoryItem { get; set; } = false;// Default == false. Can change to "true". Anything != "true" will remain default
+        [DataMember] public ItemType itemType { get; set; }
+        [DataMember] public EntitlementAppType appType { get; set; }
+        [DataMember] public string baseAppId { get; set; }
+        [DataMember] public string[] tags { get; set; }
+        [DataMember] public string[] features { get; set; }
+        [DataMember] public bool activeOnly { get; set; }
+        [DataMember] public string region { get; set; }
+        [DataMember] public DateTime availableDate { get; set; }
+        [DataMember] public string targetNamespace { get; set; }
+        [DataMember] public int? offset { get; set; }
+        [DataMember] public int? limit { get; set; }
+        [DataMember] public string sortBy { get; set; }
+    }
+
+    [DataContract]
     public class Image
     {
         [DataMember(Name = "as")] public string As { get; set; }
@@ -425,7 +456,7 @@ namespace AccelByte.Models
         [DataMember] public string name { get; set; }
         [DataMember] public PredicateType predicateType { get; set; }
         [DataMember] public string comparison { get; set; }
-        [DataMember] public string anyOf { get; set; }
+        [DataMember] public int anyOf { get; set; }
         [DataMember] public string[] values { get; set; }
         [DataMember] public string value { get; set; }
     }
@@ -433,14 +464,14 @@ namespace AccelByte.Models
     [DataContract]
     public class ItemConditionGroup
     {
-        [DataMember] public ItemPredicate[] predicate { get; set; }
-        [DataMember] public string operators { get; set; }
+        [DataMember] public ItemPredicate[] predicates { get; set; }
+        [DataMember(Name = "operator")] public string Operator { get; set; }
     }
 
     [DataContract]
     public class ItemPurchaseCondition
     {
-        [DataMember] public ItemConditionGroup[] itemConditionGroup { get; set; }
+        [DataMember] public ItemConditionGroup[] conditionGroups { get; set; }
     }
 
     [DataContract]
@@ -455,6 +486,32 @@ namespace AccelByte.Models
     public class ItemOptionBoxConfig
     {
         [DataMember] public ItemBoxItem[] boxItems { get; set; }
+    }
+
+    [DataContract]
+    public class LootBoxItems
+    {
+        [DataMember] public string itemId { get; set; }
+        [DataMember] public string itemSku { get; set; }
+        [DataMember] public string itemType { get; set; }
+        [DataMember] public int count { get; set; }
+    }
+
+    [DataContract]
+    public class ItemRewards
+    {
+        [DataMember] public string name { get; set; }
+        [DataMember] public RewardType type { get; set; }//REWARD, REWARD_GROUP, PROBABILITY_GROUP
+        [DataMember] public LootBoxItems[] lootBoxItems { get; set; }
+        [DataMember] public int weight { get; set; }
+        [DataMember] public double odds { get; set; }
+    }
+
+    [DataContract]
+    public class LootBoxConfig
+    {
+        [DataMember] public int rewardCount { get; set; }
+        [DataMember] public ItemRewards[] rewards { get; set; }
     }
 
     [DataContract]
@@ -490,7 +547,7 @@ namespace AccelByte.Models
         [DataMember] public string clazz { get; set; }
         [DataMember] public string boothName { get; set; }
         [DataMember] public int displayOrder { get; set; }
-        [DataMember] public string ext { get; set; }
+        [DataMember] public object ext { get; set; }
         [DataMember] public string region { get; set; }
         [DataMember] public string language { get; set; }
         [DataMember] public DateTime createdAt { get; set; }
@@ -538,7 +595,7 @@ namespace AccelByte.Models
         [DataMember] public string clazz { get; set; }
         [DataMember] public string boothName { get; set; }
         [DataMember] public int displayOrder { get; set; }
-        [DataMember] public string ext { get; set; }
+        [DataMember] public object ext { get; set; }
         [DataMember] public string region { get; set; }
         [DataMember] public string language { get; set; }
         [DataMember] public DateTime createdAt { get; set; }
@@ -547,12 +604,64 @@ namespace AccelByte.Models
         [DataMember] public ItemOptionBoxConfig optionBoxConfig { get; set; }
         [DataMember] public string localExt { get; set; }
         [DataMember] public Dictionary<string, int> itemQty { get; set; }
+        [DataMember] public LootBoxConfig lootBoxConfig { get; set; }
     }
 
     [DataContract]
     public class ItemPagingSlicedResult
     {
         [DataMember] public ItemInfo[] data { get; set; }
+        [DataMember] public Paging paging { get; set; }
+    }
+
+    [DataContract]
+    public class ItemInfoV2
+    {
+        [DataMember] public string itemId { get; set; }
+        [DataMember] public string appId { get; set; }
+        [DataMember] public EntitlementAppType appType { get; set; } //"GAME" 
+        [DataMember] public SeasonType SeasonType { get; set; }
+        [DataMember] public string baseAppId { get; set; }
+        [DataMember] public string sku { get; set; }
+        [DataMember] public string name { get; set; }
+        [DataMember] public EntitlementType entitlementType { get; set; }
+        [DataMember] public int useCount { get; set; }
+        [DataMember] public bool stackable { get; set; }
+        [DataMember] public string categoryPath { get; set; }
+        [DataMember] public Image[] images { get; set; }
+        [DataMember] public string thumbnailUrl { get; set; }
+        [DataMember] public Dictionary<string, object> localizations { get; set; }
+        [DataMember] public ItemStatus status { get; set; }
+        [DataMember] public bool listable { get; set; }
+        [DataMember] public bool purchasable { get; set; }
+        [DataMember] public ItemType itemType { get; set; }
+        [DataMember] public string targetNamespace { get; set; }
+        [DataMember] public string targetCurrencyCode { get; set; }
+        [DataMember] public string targetItemId { get; set; }
+        [DataMember] public Dictionary<string, object> regionData { get; set; }
+        [DataMember] public ItemRecurring recurring { get; set; }
+        [DataMember] public string[] itemIds { get; set; }
+        [DataMember] public Dictionary<string, int> itemQty { get; set; }
+        [DataMember] public string[] boundItemIds { get; set; }
+        [DataMember] public string[] tags { get; set; }
+        [DataMember] public string[] features { get; set; }
+        [DataMember] public int maxCountPerUser { get; set; }
+        [DataMember] public int maxCount { get; set; }
+        [DataMember] public string clazz { get; set; }
+        [DataMember] public Dictionary<string, object> ext { get; set; }
+        [DataMember] public string boothName { get; set; }
+        [DataMember] public int displayOrder { get; set; }
+        [DataMember] public DateTime createdAt { get; set; }
+        [DataMember] public DateTime updatedAt { get; set; }
+        [DataMember] public ItemPurchaseCondition purchaseCondition { get; set; }
+        [DataMember] public ItemOptionBoxConfig optionBoxConfig { get; set; }
+        [DataMember] public LootBoxConfig lootBoxConfig { get; set; }
+    }
+
+    [DataContract]
+    public class ItemPagingSlicedResultV2
+    {
+        [DataMember] public ItemInfoV2[] data { get; set; }
         [DataMember] public Paging paging { get; set; }
     }
 
@@ -706,6 +815,14 @@ namespace AccelByte.Models
     #region Entitlements
 
     [DataContract]
+    public class EntitlementReward
+    {
+        [DataMember] public string itemId { get; set; }
+        [DataMember] public string itemSku { get; set; }
+        [DataMember] public int count { get; set; }
+    }
+
+    [DataContract]
     public class EntitlementInfo
     {
         [DataMember] public string id { get; set; }
@@ -733,6 +850,10 @@ namespace AccelByte.Models
         [DataMember] public DateTime createdAt { get; set; }
         [DataMember] public DateTime updatedAt { get; set; }
         [DataMember] public ItemOptionBoxConfig optionBoxConfig { get; set; }
+        [DataMember] public string requestId { get; set; }
+        [DataMember] public bool replayed { get; set; }
+        [DataMember] public EntitlementReward[] rewards { get; set; }
+        [DataMember] public LootBoxConfig lootBoxConfig { get; set; }
     }
 
     [DataContract]
@@ -747,7 +868,7 @@ namespace AccelByte.Models
     {
         [DataMember] public string id { get; set; }
         [DataMember] public string itemId { get; set; }
-        [DataMember(Name ="namespace")] public string Namespace { get; set; }
+        [DataMember(Name = "namespace")] public string Namespace { get; set; }
         [DataMember] public string userId { get; set; }
         [DataMember] public EntitlementClazz clazz { get; set; }
         [DataMember] public EntitlementType type { get; set; }
@@ -766,6 +887,7 @@ namespace AccelByte.Models
     {
         [DataMember] public int useCount { get; set; }
         [DataMember] public string[] options { get; set; }
+        [DataMember] public string requestId { get; set; }
     };
 
     [DataContract]
@@ -890,6 +1012,9 @@ namespace AccelByte.Models
     [DataContract]
     public class PlayStationDLCSync
     {
+        [DataMember] public string productId { get; set; }
+        [DataMember] public int price { get; set; }
+        [DataMember] public string currencyCode { get; set; }
         [DataMember] public int serviceLabel { get; set; }
     }
 
@@ -1038,4 +1163,39 @@ namespace AccelByte.Models
     }
 
     #endregion
+
+    [DataContract]
+    public class SectionInfo
+    {
+        [DataMember] public string title { get; set; }
+        [DataMember] public string description { get; set; }
+        [DataMember] public string longDescription { get; set; }
+        [DataMember] public string sectionId { get; set; }
+        [DataMember(Name = "namespace")] public string Namespace { get; set; }
+        [DataMember] public string viewId { get; set; }
+        [DataMember] public string name { get; set; }
+        [DataMember] public bool active { get; set; }
+        [DataMember] public DateTime startDate { get; set; }
+        [DataMember] public DateTime endDate { get; set; }
+        [DataMember] public ItemInfo[] currentRotationItems { get; set; }
+        [DataMember] public DateTime currentRotationExpireAt { get; set; }
+        [DataMember] public DateTime createdAt { get; set; }
+        [DataMember] public DateTime updatedAt { get; set; }
+        [DataMember] public object localExt { get; set; }
+    }
+
+    [DataContract]
+    public class ViewInfo
+    {
+        [DataMember] public string title { get; set; }
+        [DataMember] public string description { get; set; }
+        [DataMember] public string longDescription { get; set; }
+        [DataMember] public string viewId { get; set; }
+        [DataMember(Name = "namespace")] public string Namespace { get; set; }
+        [DataMember] public string name { get; set; }
+        [DataMember] public int displayOrder { get; set; }
+        [DataMember] public DateTime createdAt { get; set; }
+        [DataMember] public DateTime updatedAt { get; set; }
+        [DataMember] public object localExt { get; set; }
+    }
 }

@@ -18,6 +18,10 @@ namespace AccelByte.Api
         {
             try
             {
+                if (macAddress == null)
+                {
+                    macAddress = string.Empty;
+                }
                 byte[] byteArray = Encoding.ASCII.GetBytes(macAddress);
                 using (var myhmacsha1 = new HMACSHA1(Encoding.ASCII.GetBytes(key)))
                 {

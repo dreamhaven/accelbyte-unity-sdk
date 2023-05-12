@@ -147,20 +147,42 @@ namespace AccelByte.Api
 
         public static MultiOAuthConfigs LoadOAuthFile(string targetPlatform, bool isServerConfig = false)
         {
-            var retval = new MultiOAuthConfigs();
+            AccelByteDebug.LogVerbose($"Loading OAuth file in \"{GeneratedConfigsResourceDirectory}\" directory with \"{targetPlatform}\" platform");
+
+            MultiOAuthConfigs retval = null;
             UnityEngine.Object targetOAuthFile = null;
             bool moveConfigFile = false;
-            var oldOAuthFile = Resources.Load(OldOAuthResourcePath(targetPlatform, isServerConfig));
-            var oAuthFile = Resources.Load(OAuthResourcePath(targetPlatform, isServerConfig));
+
+            string oldPath = OldOAuthResourcePath(targetPlatform, isServerConfig);
+            string latestPath = OAuthResourcePath(targetPlatform, isServerConfig);
+            string usedPath = string.Empty;
+
+            var oldOAuthFile = Resources.Load(oldPath);
+            var oAuthFile = Resources.Load(latestPath);
 
             if (oldOAuthFile != null && oAuthFile == null)
             {
+                usedPath = oldPath;
                 targetOAuthFile = oldOAuthFile;
                 moveConfigFile = true;
             }
             else if (oAuthFile != null)
             {
+                usedPath = latestPath;
                 targetOAuthFile = oAuthFile;
+            }
+
+            if (!string.IsNullOrEmpty(usedPath))
+            {
+                AccelByteDebug.LogVerbose($"Loading AccelByte OAuth file from {usedPath}");
+            }
+            else
+            {
+                string platformName = targetPlatform;
+                if(string.IsNullOrEmpty(platformName))
+                {
+                    platformName = "default";
+                }
             }
 
             if (targetOAuthFile != null)
@@ -169,12 +191,12 @@ namespace AccelByte.Api
                 retval = wholeOAuthJsonText.ToObject<MultiOAuthConfigs>();
             }
 
-#if UNITY_EDITOR
             if (moveConfigFile)
             {
+#if UNITY_EDITOR
                 SaveConfig(retval, OAuthFullPath(targetPlatform, isServerConfig));
-            }
 #endif
+            }
             if (retval != null)
             {
                 retval.Expand();
@@ -185,7 +207,12 @@ namespace AccelByte.Api
 
         public static OAuthConfig GetOAuthByEnvironment(MultiOAuthConfigs multiOAuthConfigs, SettingsEnvironment environment)
         {
-            OAuthConfig retval = null;
+            if(multiOAuthConfigs == null)
+            {
+                return null;
+            }
+
+            OAuthConfig retval;
             switch (environment)
             {
                 case SettingsEnvironment.Development:
@@ -231,7 +258,7 @@ namespace AccelByte.Api
 
         public static MultiConfigs LoadSDKConfigFile()
         {
-            var retval = new MultiConfigs();
+            MultiConfigs retval = null;
             UnityEngine.Object targetConfigFile = null;
             bool moveConfigFile = false;
 
@@ -253,12 +280,12 @@ namespace AccelByte.Api
                 retval = wholeJsonText.ToObject<MultiConfigs>();
             }
 
-#if UNITY_EDITOR
             if (moveConfigFile)
             {
+#if UNITY_EDITOR
                 SaveConfig(retval, SDKConfigFullPath(false));
-            }
 #endif
+            }
             if (retval != null)
             {
                 retval.Expand();
@@ -291,12 +318,12 @@ namespace AccelByte.Api
                 retval = wholeJsonText.ToObject<MultiServerConfigs>();
             }
 
-#if UNITY_EDITOR
             if (moveConfigFile)
             {
+#if UNITY_EDITOR
                 SaveConfig(retval, SDKConfigFullPath(true));
-            }
 #endif
+            }
             if (retval != null)
             {
                 retval.Expand();
@@ -307,7 +334,12 @@ namespace AccelByte.Api
 
         public static Config GetSDKConfigByEnvironment(MultiConfigs multiSDKConfigs, SettingsEnvironment environment)
         {
-            Config retval = null;
+            if(multiSDKConfigs == null)
+            {
+                return null;
+            }
+
+            Config retval;
             switch (environment)
             {
                 case SettingsEnvironment.Development:
@@ -481,8 +513,8 @@ namespace AccelByte.Api
                     activePlatform = PlatformType.PS5.ToString();
                     break;
 #endif
-                case RuntimePlatform.XBOX360:
-                case RuntimePlatform.XboxOne:
+                case RuntimePlatform.GameCoreXboxOne:
+                case RuntimePlatform.GameCoreXboxSeries:
                     activePlatform = PlatformType.Live.ToString();
                     break;
                 case RuntimePlatform.Switch:
@@ -497,15 +529,21 @@ namespace AccelByte.Api
 
         public AccelByteSettingsV2(string platform, SettingsEnvironment environment, bool isServer)
         {
-            MultiOAuthConfigs multiOAuthConfigs = AccelByteSettingsV2.LoadOAuthFile(platform, isServer);
             string serverFlagLog = isServer ? "" : "Server ";
+
+            MultiOAuthConfigs multiOAuthConfigs = AccelByteSettingsV2.LoadOAuthFile(platform, isServer);
             if (multiOAuthConfigs == null)
             {
-                multiOAuthConfigs = AccelByteSettingsV2.LoadOAuthFile("", isServer);
+                multiOAuthConfigs = AccelByteSettingsV2.LoadOAuthFile(string.Empty, isServer);
                 if (multiOAuthConfigs != null)
                 {
                     AccelByteDebug.Log($"{serverFlagLog}OAuth {platform} config not found, using default OAuth config");
                 }
+            }
+            if (multiOAuthConfigs == null)
+            {
+                multiOAuthConfigs = new MultiOAuthConfigs();
+                AccelByteDebug.LogWarning($"{serverFlagLog}OAuth config not found, using empty config");
             }
 
             IAccelByteMultiConfigs multiConfigs;
@@ -516,12 +554,6 @@ namespace AccelByte.Api
             else
             {
                 multiConfigs = AccelByteSettingsV2.LoadSDKServerConfigFile();
-            }
-
-            if (multiOAuthConfigs == null)
-            {
-                multiOAuthConfigs = new MultiOAuthConfigs();
-                AccelByteDebug.LogWarning($"{serverFlagLog}OAuth config not found, using empty config");
             }
             if (multiConfigs == null)
             {

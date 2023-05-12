@@ -2,6 +2,68 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [15.18.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.18.0%0D15.17.0) (2023-05-08)
+
+
+### Features
+
+* add custom attribute property ([bc230d6](https://github.com/AccelByte/accelbyte-unity-sdk/commits/bc230d6989648e2acbb5f4c72360f18f3c4d4733))
+* add statistic cycle endpoint along with the models ([a5058b2](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a5058b26e6b3c074078743208638709db164aabf))
+* Section ID needs to be passed and stored when create order for items that are ‘Section Exclusive’. ([1a10c76](https://github.com/AccelByte/accelbyte-unity-sdk/commits/1a10c76a983a9fc10802a0f91d95e8952496ce87))
+
+
+### Bug Fixes
+
+* add config null check on setting editor ([340ba9a](https://github.com/AccelByte/accelbyte-unity-sdk/commits/340ba9ad3bca87ce93c6adc1f3d2e02ba8a76c43))
+* add multiple constructor in user and oauth api, set all api to public ([b1ef66b](https://github.com/AccelByte/accelbyte-unity-sdk/commits/b1ef66b1c0a99df65919047cc9277e29d20f4acc))
+* fix config setting unable to redirect to default config ([98b7327](https://github.com/AccelByte/accelbyte-unity-sdk/commits/98b732735ffd2f2043065034adadbfc42fb8f418))
+* fix multiregistry issue ([fc2a18c](https://github.com/AccelByte/accelbyte-unity-sdk/commits/fc2a18cd467aa397b3f8dbbf14b5184060400daf))
+* remove url config warning when the value is empty ([7203a2f](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7203a2fcac99e5399c3d275e77265171dd25c6a3))
+
+
+### Refactors
+
+* add request task only at game main thread ([4d35de4](https://github.com/AccelByte/accelbyte-unity-sdk/commits/4d35de497741e0d2595655fde56b9389ba6ce2ad))
+* remove xbox 360 from config ([842090e](https://github.com/AccelByte/accelbyte-unity-sdk/commits/842090e58a2d856bdef1d6162c2fcb601add8966))
+
+## [15.17.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.17.0%0D15.16.2) (2023-04-26)
+
+
+### Features
+
+* Add itemName and currencyCode to response of RedeemCampaignCode API ([29a56e3](https://github.com/AccelByte/accelbyte-unity-sdk/commits/29a56e304c6166dda693a56fa0852fcb947165a6))
+* add send verification to email ([3b19774](https://github.com/AccelByte/accelbyte-unity-sdk/commits/3b1977488816b2baa39bcd08eeb250b9bbb9b8e7))
+* **cloudsave:** add get bulk user record keys and records ([9e8beb4](https://github.com/AccelByte/accelbyte-unity-sdk/commits/9e8beb4a61744084d08e3a07cb184e53b5f4d2a7))
+* ecommerce enable item sellback store ([dbc3498](https://github.com/AccelByte/accelbyte-unity-sdk/commits/dbc3498ab629dded438df39c465814ef675f79c7))
+* **mmv2:** implement get metrics and add queueTime field in create ticket response ([f34b37a](https://github.com/AccelByte/accelbyte-unity-sdk/commits/f34b37a6415142ab115c9cd651436c0e69c50e0c))
+* server api cloudsave get gamerecord ([c91da29](https://github.com/AccelByte/accelbyte-unity-sdk/commits/c91da290d29b63fdc607e7cee19c8ecc1c315d0b))
+* **UGC:** new get channels, fix sort by and order by ([9460753](https://github.com/AccelByte/accelbyte-unity-sdk/commits/9460753bd2980034f7ef074d9f0cf1a9e864ca87))
+
+
+### Refactors
+
+* add webrequest scheduler ([5d0296a](https://github.com/AccelByte/accelbyte-unity-sdk/commits/5d0296ad7743d35359a480707f3c8b03b2bb05d5))
+* change logger abstraction ([9071cfe](https://github.com/AccelByte/accelbyte-unity-sdk/commits/9071cfe766a0f44db99407773bec130bb151ceb7))
+* refactor user and oauth api structure ([4850aea](https://github.com/AccelByte/accelbyte-unity-sdk/commits/4850aea1e2ad6e2c8a1412380a67d60a78120545))
+* remove sdk warnings ([829557b](https://github.com/AccelByte/accelbyte-unity-sdk/commits/829557b354a040f821af1cb4620181a3aa1dc2b0))
+* revert back user api function names, remove coroutine usage within user interface ([89db768](https://github.com/AccelByte/accelbyte-unity-sdk/commits/89db7689c15cc267a9f558d43945545464dcc9cf))
+* user api using c# async await ([efdd54a](https://github.com/AccelByte/accelbyte-unity-sdk/commits/efdd54ad1b3db997152e4146fdfa839260b24591))
+
+### [15.16.2](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.16.2%0D15.16.1) (2023-04-19)
+
+
+### Bug Fixes
+
+* [ASP-4200] Android null device id ([77726e6](https://github.com/AccelByte/accelbyte-unity-sdk/commits/77726e6882a4df44cded4105c88369b747cda706))
+* add static marshal linking in linux sigterm listener ([7c8cc97](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7c8cc9732806ad38286fc1b7fe8a25c73deea3be))
+* fix config setting unable to redirect to default config ([789673d](https://github.com/AccelByte/accelbyte-unity-sdk/commits/789673d1e34ecb0143b067f2aaf8e59908aa1a1f))
+
+
+### Refactors
+
+* add API http client getter ([8b35b18](https://github.com/AccelByte/accelbyte-unity-sdk/commits/8b35b1882a58c7a6243cedbf76574d33536d484e))
+* remove client secret as requirement ([a017120](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a017120476248d561cf7168f092137b37de52bad))
+
 ### [15.16.1](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.16.1%0D15.16.0) (2023-04-18)
 
 

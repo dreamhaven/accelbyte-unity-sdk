@@ -24,7 +24,6 @@ namespace AccelByte.Server
         private static ServerOauthLoginSession session;
         private static CoroutineRunner coroutineRunner;
         private static IHttpClient httpClient;
-        private static TokenData accessToken;
         private static DedicatedServer server;
         private static ServerDSHub dsHub;
         private static ServerWatchdog watchdog;
@@ -47,7 +46,7 @@ namespace AccelByte.Server
         private static SettingsEnvironment activeEnvironment = SettingsEnvironment.Default;
         internal static event Action configReset;
         public static event Action<SettingsEnvironment> environmentChanged;
-        private static IHttpRequestSender defaultHttpSender = new UnityHttpRequestSender();
+        private static IHttpRequestSender defaultHttpSender = null;
 
         internal static OAuthConfig OAuthConfig
         {
@@ -71,6 +70,11 @@ namespace AccelByte.Server
         {
             get
             {
+                if (defaultHttpSender == null)
+                {
+                    var httpSenderScheduler = new WebRequestSchedulerAsync();
+                    defaultHttpSender = new UnityHttpRequestSender(httpSenderScheduler);
+                }
                 return defaultHttpSender;
             }
             set
@@ -116,10 +120,6 @@ namespace AccelByte.Server
             {
                 string activePlatform = AccelByteSettingsV2.GetActivePlatform(true);
                 newSettings = RetrieveConfigFromJsonFile(activePlatform, activeEnvironment);
-                if (newSettings.ServerSdkConfig.IsRequiredFieldEmpty())
-                {
-                    newSettings = RetrieveConfigFromJsonFile("", activeEnvironment);
-                }
             }
             else
             {
@@ -681,7 +681,6 @@ namespace AccelByte.Server
 
         private static void ResetApis()
         {
-            accessToken = null;
             server = null;
             dsHub = null;
             watchdog = null;

@@ -25,7 +25,7 @@ namespace AccelByte.Core
             {
                 AccelByteSDKMain.OnGameUpdate -= onGameUpdate;
 
-                using UnityWebRequest unityWebRequest = request.GetUnityWebRequest();
+                UnityWebRequest unityWebRequest = request.GetUnityWebRequest();
                 unityWebRequest.timeout = timeoutMs / 1000;
 
                 WebRequestTask newTask = new WebRequestTask(request, unityWebRequest, delayTimeMs)

@@ -1,7 +1,6 @@
-﻿// Copyright (c) 2021 - 2022 AccelByte Inc. All Rights Reserved.
+﻿// Copyright (c) 2021 - 2023 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
-
 using System;
 using AccelByte.Core;
 using AccelByte.Models;
@@ -18,6 +17,7 @@ namespace AccelByte.Api
         private readonly UserSession session;
         private readonly CoroutineRunner coroutineRunner;
 
+        [UnityEngine.Scripting.Preserve]
         internal UGC(UGCApi inApi
             , UserSession inSession
             , CoroutineRunner inCoroutineRunner)
@@ -36,7 +36,7 @@ namespace AccelByte.Api
         /// <param name="inSession"></param>
         /// <param name="inNamespace">DEPRECATED - Now passed to Api from Config</param>
         /// <param name="inCoroutineRunner"></param>
-        [Obsolete("namespace param is deprecated (now passed to Api from Config): Use the overload without it")]
+        [Obsolete("namespace param is deprecated (now passed to Api from Config): Use the overload without it"), UnityEngine.Scripting.Preserve]
         internal UGC(UGCApi inApi
             , UserSession inSession
             , string inNamespace
@@ -141,11 +141,13 @@ namespace AccelByte.Api
         /// <param name="callback">
         /// This will be called when the operation succeeded. The result is UGCResponse Model.
         /// </param>
+        /// <param name="updateContent">This will be used to update the content too or only content information . Default value is false.</param>
         [Obsolete("This method will be deprecated in future, please use ModifyContent(string channelId, string contentId, UGCUpdateRequest ModifyRequest, ResultCallback<UGCResponse> callback)")]
         public void ModifyContent(string channelId
             , string contentId
             , UGCRequest ModifyRequest
-            , ResultCallback<UGCResponse> callback)
+            , ResultCallback<UGCResponse> callback
+            , bool updateContent = false)
         {
             Report.GetFunctionLog(GetType().Name);
 
@@ -156,7 +158,7 @@ namespace AccelByte.Api
             }
 
             coroutineRunner.Run(
-                api.ModifyContent(session.UserId, channelId, contentId, ModifyRequest, callback));
+                api.ModifyContent(session.UserId, channelId, contentId, ModifyRequest, callback, updateContent));
         }
 
         /// <summary>
@@ -172,6 +174,7 @@ namespace AccelByte.Api
         /// <param name="fileExtension">FileExtension of the content</param>
         /// <param name="callback">This will be called when the operation succeeded. The result is UGCResponse Model.</param>
         /// <param name="contentType">The specific type of the content's modified. Default value is "application/octet-stream"</param>
+        /// <param name="updateContent">This will be used to update the content too or only content information . Default value is false.</param>
         [Obsolete("This method will be deprecated in future, please use ModifyContent(string channelId, string contentId, UGCUpdateRequest ModifyRequest, ResultCallback<UGCResponse> callback)")]
         public void ModifyContent(string channelId
             , string contentId
@@ -182,7 +185,8 @@ namespace AccelByte.Api
             , byte[] preview
             , string fileExtension
             , ResultCallback<UGCResponse> callback
-            , string contentType = "application/octet-stream")
+            , string contentType = "application/octet-stream"
+            , bool updateContent = false)
         {
             Report.GetFunctionLog(GetType().Name);
 
@@ -204,7 +208,8 @@ namespace AccelByte.Api
                     preview,
                     fileExtension,
                     callback,
-                    contentType));
+                    contentType,
+                    updateContent));
         }
 
         /// <summary>
@@ -497,8 +502,17 @@ namespace AccelByte.Api
                 return;
             }
 
-            coroutineRunner.Run(
-                api.UpdateLikeStatusToContent(contentId, likeStatus, callback));
+            var requestModel = new UpdateLikeStatusToContentRequest()
+            {
+                LikeStatus = likeStatus
+            };
+
+            var requestParameter = new UpdateLikeStatusToContentParameter()
+            {
+                ContentId = contentId
+            };
+
+            coroutineRunner.Run(api.UpdateLikeStatusToContent(requestModel, requestParameter, callback));
         }
 
         /// <summary>
@@ -540,8 +554,17 @@ namespace AccelByte.Api
                 return;
             }
 
-            coroutineRunner.Run(
-                api.UpdateFollowStatus(session.UserId, followStatus, callback));
+            var requestModel = new UpdateFollowStatusRequest()
+            {
+                FollowStatus = followStatus
+            };
+
+            var requestParameter = new UpdateFollowStatusParameter()
+            {
+                UserId = session.UserId
+            };
+
+            coroutineRunner.Run(api.UpdateFollowStatus(requestModel, requestParameter, callback));
         }
 
         /// <summary>
@@ -560,8 +583,12 @@ namespace AccelByte.Api
                 return;
             }
 
-            coroutineRunner.Run(
-                api.GetBulkContentId(contentId, callback));
+            var requestModel = new GetBulkContentIdRequest()
+            {
+                ContentId = contentId
+            };
+
+            coroutineRunner.Run(api.GetBulkContentId(requestModel, callback));
         }
 
         /// <summary>
@@ -766,8 +793,18 @@ namespace AccelByte.Api
                 return;
             }
 
-            coroutineRunner.Run(
-                api.UpdateChannel(session.UserId, channelId, name, callback));
+            var requestModel = new UpdateChannelRequest()
+            {
+                Name = name
+            };
+
+            var requestParameter = new UpdateChannelParameter()
+            {
+                UserId = session.UserId,
+                ChannelId = channelId
+            };
+
+            coroutineRunner.Run(api.UpdateChannel(requestModel, requestParameter, callback));
         }
     }
 }

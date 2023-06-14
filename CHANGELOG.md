@@ -2,6 +2,65 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [16.0.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/16.0.0%0D15.19.2) (2023-06-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* changed Attribute field in session models from Dictionary<string, string> to Dictionary<string, object>
+
+### Bug Fixes
+
+* preserve user API ([76b8d02](https://github.com/AccelByte/accelbyte-unity-sdk/commits/76b8d02368b5da4ec9278ab85c86e54785cb8ebc))
+* **UGC:** change the content update boolean to false by default ([fb448d0](https://github.com/AccelByte/accelbyte-unity-sdk/commits/fb448d0f907f173cc101f6a866b45da524d525d5))
+
+
+### Refactors
+
+* cache generated device id ([65e117e](https://github.com/AccelByte/accelbyte-unity-sdk/commits/65e117e05d51fcbc1183b74e61d87682a29e896c))
+* change attribute data type from Dictionary<string, string> to Dictionary<string, object> ([03fd0f1](https://github.com/AccelByte/accelbyte-unity-sdk/commits/03fd0f187c987cb1823922bd391b4fa9f432e1ea))
+
+### [15.19.2](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.19.2%0D15.19.1) (2023-05-26)
+
+
+### Features
+
+* **DS:** add DSM heartbeat API ([dd0bba3](https://github.com/AccelByte/accelbyte-unity-sdk/commits/dd0bba3e6b6ce3eaaf91c185d86cd8bc4d2eaa71))
+
+### [15.19.1](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.19.1%0D15.19.0) (2023-05-24)
+
+
+### Bug Fixes
+
+* preserve SDK models and API ([8c63e9f](https://github.com/AccelByte/accelbyte-unity-sdk/commits/8c63e9fb9181cce6e4f2b42e40c43a6d5f54c910))
+
+## [15.19.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.19.0%0D15.18.2) (2023-05-22)
+
+
+### Features
+
+* Supporting Expiry Dates for Item Types ([ddfc6dd](https://github.com/AccelByte/accelbyte-unity-sdk/commits/ddfc6ddffebd5bcbebe89b639d93fdf2c0ce00c6))
+
+
+### Bug Fixes
+
+* [ASP-4655] add null IHttpResponse condition ([cb69bcf](https://github.com/AccelByte/accelbyte-unity-sdk/commits/cb69bcf3ae7a68b920d027a178955cd4613ad32e))
+
+### [15.18.2](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.18.2%0D15.18.1) (2023-05-17)
+
+
+### Bug Fixes
+
+* add unityWebRequest dispose for better cleanup ([a58f902](https://github.com/AccelByte/accelbyte-unity-sdk/commits/a58f902a821b4137bd85d43a6ba71870c29185e7))
+* exclude webgl in set platform login cache ([dfe486a](https://github.com/AccelByte/accelbyte-unity-sdk/commits/dfe486a7b81f40739521ee499f4c49fa77d25bed))
+
+### [15.18.1](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.18.1%0D15.18.0) (2023-05-12)
+
+
+### Bug Fixes
+
+* fix webgl websocket missing implementation ([31c1f44](https://github.com/AccelByte/accelbyte-unity-sdk/commits/31c1f442f8064449e967dd58a9d9be664c6ab7b0))
+
 ## [15.18.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/15.18.0%0D15.17.0) (2023-05-08)
 
 

@@ -1,7 +1,6 @@
-// Copyright (c) 2020 - 2022 AccelByte Inc. All Rights Reserved.
+// Copyright (c) 2020 - 2023 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
-
 using System;
 using AccelByte.Core;
 using AccelByte.Models;
@@ -15,6 +14,7 @@ namespace AccelByte.Server
         private readonly ISession session;
         private readonly CoroutineRunner coroutineRunner;
 
+        [UnityEngine.Scripting.Preserve]
         internal ServerEcommerce( ServerEcommerceApi inApi
             , ISession inSession
             , CoroutineRunner inCoroutineRunner )
@@ -33,7 +33,7 @@ namespace AccelByte.Server
         /// <param name="inSession"></param>
         /// <param name="inNamespace">DEPRECATED - Now passed to Api from Config</param>
         /// <param name="inCoroutineRunner"></param>
-        [Obsolete( "namespace param is deprecated (now passed to Api from Config): Use the overload without it" )]
+        [Obsolete( "namespace param is deprecated (now passed to Api from Config): Use the overload without it" ), UnityEngine.Scripting.Preserve]
         internal ServerEcommerce
             ( ServerEcommerceApi inApi
             , ISession inSession
@@ -210,6 +210,28 @@ namespace AccelByte.Server
 
             coroutineRunner.Run(
                 api.QueryItemsByCriteria(criteria, callback));
+        }
+        
+        /// <summary>
+        /// Get Items by criteria Endpoint Version 2. Set ItemCriteria fields as null if you don't want to specify the criteria.
+        /// The result callback will returns a ItemPagingSlicedResult that contains Items within it.
+        /// </summary>
+        /// <param name="criteria">Criteria to search items</param>
+        /// <param name="callback">Returns a Result that contains ItemPagingSlicedResult via callback when completed.</param>
+        public void QueryItemsByCriteriaV2( ItemCriteriaV3 criteria
+            , ResultCallback<ItemPagingSlicedResultV2> callback )
+        {
+            Report.GetFunctionLog(GetType().Name);
+            Assert.IsNotNull(criteria, "Can't get items by criteria; Criteria parameter is null!");
+
+            if (!session.IsValid())
+            {
+                callback.TryError(ErrorCode.IsNotLoggedIn);
+                return;
+            }
+
+            coroutineRunner.Run(
+                api.QueryItemsByCriteriaV2(criteria, callback));
         }
     }
 }

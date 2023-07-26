@@ -2,6 +2,74 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [16.3.1](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/16.3.1%0D16.3.0) (2023-07-25)
+
+
+### Bug Fixes
+
+* use connect async to avoid blocking game thread ([3d81829](https://github.com/AccelByte/accelbyte-unity-sdk/commits/3d81829c66c11fd2bbecc25661c076da90a755c9))
+
+## [16.3.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/16.3.0%0D16.2.1) (2023-07-17)
+
+
+### Features
+
+* exposed sync consumable entitlement ([52c8206](https://github.com/AccelByte/accelbyte-unity-sdk/commits/52c8206270fc5506945c4dc9db888bc5c93d371e))
+* exposing missing psn sync entitlement multiple service ([507ae71](https://github.com/AccelByte/accelbyte-unity-sdk/commits/507ae71fc95b43affbe7eb7260d02a399f6d9c9a))
+
+
+### Bug Fixes
+
+* adjust typo in IAPOrderStatus enum ([d1336c9](https://github.com/AccelByte/accelbyte-unity-sdk/commits/d1336c91383b332049ea5d62bfac688139476f08))
+
+
+### Refactors
+
+* set AccelByteSDKMain to public ([dcecf1d](https://github.com/AccelByte/accelbyte-unity-sdk/commits/dcecf1d4733e6a405bdedf8d29b1180166fbe451))
+
+### [16.2.1](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/16.2.1%0D16.2.0) (2023-07-17)
+
+
+### Refactors
+
+* set AccelByteSDKMain to public ([d38cf3d](https://github.com/AccelByte/accelbyte-unity-sdk/commits/d38cf3ddbfc51c3ab64a2eb2c9abb0edc16af49b))
+
+## [16.2.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/16.2.0%0D16.1.0) (2023-07-03)
+
+
+### Features
+
+* [JSC-1199] add presence broadcast event UI and mechanism ([e45e805](https://github.com/AccelByte/accelbyte-unity-sdk/commits/e45e805c1cb2b5abbd05d094ceaf22f7860414c9))
+* added missing metafile for gdpr api ([369801a](https://github.com/AccelByte/accelbyte-unity-sdk/commits/369801ace3f643af3042b2d4396075b78e74083d))
+* **chat:** add group chat moderator api ([fb8fcf0](https://github.com/AccelByte/accelbyte-unity-sdk/commits/fb8fcf003bc9246c0f11d9465ba6f87314443d73))
+* Provide methods for end users to request account deletion for own headless accounts in game ([98b0109](https://github.com/AccelByte/accelbyte-unity-sdk/commits/98b01094dd2bd084c852dbc122e981237154e6cf))
+
+
+### Bug Fixes
+
+* [JSC-1278] remove unwanted warning while adding unity sdk through git ([c474325](https://github.com/AccelByte/accelbyte-unity-sdk/commits/c47432500a4af43dfa514fc89c7b345362dab123))
+
+## [16.1.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/16.1.0%0D16.0.0) (2023-06-19)
+
+
+### Features
+
+* [JSC-1125] Get device Id for Xbox ([7867c26](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7867c262bce9f2b95741ab2c5518f2e2394a3204))
+* add new config member for P2P and assign reasonable default value ([b622e09](https://github.com/AccelByte/accelbyte-unity-sdk/commits/b622e096310f5f5efadd11939424b2c3fd4283de))
+* custom game thread signaller support ([e8ace94](https://github.com/AccelByte/accelbyte-unity-sdk/commits/e8ace94628e9318025ff5ce09163c2d6ece4014d))
+* leaderboard v3 endpoints ([7b911ad](https://github.com/AccelByte/accelbyte-unity-sdk/commits/7b911ad49989ebf0c4a53edcbb53e166771014b1))
+* new statistic endpoint ([f29d963](https://github.com/AccelByte/accelbyte-unity-sdk/commits/f29d963b43b873b0c86ba77519e62f572c9aa711))
+
+
+### Refactors
+
+* **AMS:** change ServerWatchdog to ServerAMS ([3a167db](https://github.com/AccelByte/accelbyte-unity-sdk/commits/3a167dba7f4babfbc461e96fa8aa461314b80a31))
+
+
+### Documentations
+
+* redirect readme to doc portal ([37d08b8](https://github.com/AccelByte/accelbyte-unity-sdk/commits/37d08b80532ec6f680973714fefa2d27d717d385))
+
 ## [16.0.0](https://github.com/AccelByte/accelbyte-unity-sdk/branches/compare/16.0.0%0D15.19.2) (2023-06-05)
 
 

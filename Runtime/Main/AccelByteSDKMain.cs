@@ -2,14 +2,23 @@
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
-using System.Collections;
-using System.Collections.Generic;
+using AccelByte.Api;
 using UnityEngine;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("com.accelbyte.UnitySDKSteam")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("com.accelbyte.UnitySDKPS4")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("com.accelbyte.UnitySDKPS5")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("com.accelbyte.UnitySDKGameCore")]
 namespace AccelByte.Core
 {
 #if (UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX) && UNITY_SERVER
     using PlatformMain = LinuxServerMain;
+#elif !UNITY_EDITOR && UNITY_PS4
+    using PlatformMain = PS4Main;
+#elif !UNITY_EDITOR && UNITY_PS5
+    using PlatformMain = PS5Main;
+#elif !UNITY_EDITOR && UNITY_GAMECORE
+    using PlatformMain = GameCoreMain;
 #else
     using PlatformMain = NullMain;
 #endif
@@ -47,11 +56,28 @@ namespace AccelByte.Core
 
             onGameUpdate = null;
 
+            ExecuteBootstraps();
+
             Main.Run();
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.playModeStateChanged += EditorApplicationPlayyModeStateChanged;
 #endif
             Application.quitting += ApplicationQuitting;
+        }
+
+        private static void StopSDK()
+        {
+            PredefinedEventBootstrap.Stop();
+            ClientAnaylticsBootstrap.Stop();
+            DetachGameUpdateSignaller();
+            Main.Stop();
+        }
+
+        private static void ExecuteBootstraps()
+        {
+            PredefinedEventBootstrap.Execute();
+            EnvrionmentBootstrap.Execute();
+            ClientAnaylticsBootstrap.Execute();
         }
 
 #if UNITY_EDITOR
@@ -60,7 +86,7 @@ namespace AccelByte.Core
             if(newState == UnityEditor.PlayModeStateChange.ExitingPlayMode)
             {
                 UnityEditor.EditorApplication.playModeStateChanged -= EditorApplicationPlayyModeStateChanged;
-                Main.Stop();
+                StopSDK();
             }
         }
 #endif
@@ -85,6 +111,16 @@ namespace AccelByte.Core
             }
         }
 
+        public static void DetachGameUpdateSignaller()
+        {
+            if (gameThreadSignaller != null)
+            {
+                gameThreadSignaller.GameThreadSignal -= OnGameThreadUpdate;
+            }
+
+            gameThreadSignaller = null;
+        }
+
         private static void CheckMainThreadSignallerAlive()
         {
             if(gameThreadSignaller == null)
@@ -106,7 +142,7 @@ namespace AccelByte.Core
 
         private static void ApplicationQuitting()
         {
-            Main.Stop();
+            StopSDK();
         }
     }
 }

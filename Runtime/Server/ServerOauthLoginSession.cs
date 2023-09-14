@@ -1,20 +1,16 @@
-﻿// Copyright (c) 2020 - 2022 AccelByte Inc. All Rights Reserved.
+﻿// Copyright (c) 2020 - 2023 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
-using System;
 using System.Collections;
 using AccelByte.Core;
 using AccelByte.Models;
-using UnityEngine;
 using UnityEngine.Assertions;
-using Random = System.Random;
 
 namespace AccelByte.Server
 {
     public class ServerOauthLoginSession : ISession
     {
-
         private readonly string clientId;
         private readonly string clientSecret;
         private readonly string baseUrl;
@@ -39,8 +35,8 @@ namespace AccelByte.Server
             coroutineRunner = inCoroutineRunner;
         }
 
-        public override string AuthorizationToken 
-        { 
+        public override string AuthorizationToken
+        {
             get { return tokenData != null ? tokenData.access_token : null; }
             set { tokenData.access_token = value; }
         }
@@ -67,10 +63,42 @@ namespace AccelByte.Server
             }
         }
 
+        internal async void LoginWithClientCredentials(ResultCallback<TokenData> callback)
+        {
+            const bool clienSecretRequired = false;
+            IHttpRequest request = HttpRequestBuilder.CreatePost(baseUrl + "/v3/oauth/token")
+                .WithBasicAuth(clientId, clientSecret, clienSecretRequired)
+                .WithContentType(MediaType.ApplicationForm)
+                .Accepts(MediaType.ApplicationJson)
+                .WithFormParam("grant_type", "client_credentials")
+                .GetResult();
+
+            HttpSendResult sendResult = await httpClient.SendRequestAsync(request);
+
+            IHttpResponse response = sendResult.CallbackResponse;
+            Result<TokenData> getClientTokenResult = response.TryParseJson<TokenData>();
+
+            if (!getClientTokenResult.IsError)
+            {
+                SetSession(getClientTokenResult.Value);
+                if (maintainAccessTokenCoroutine == null)
+                {
+                    maintainAccessTokenCoroutine = coroutineRunner.Run(MaintainToken());
+                }
+
+                callback.TryOk(getClientTokenResult.Value);
+            }
+            else
+            {
+                callback.TryError(getClientTokenResult.Error);
+            }
+        }
+
         private IEnumerator GetClientToken( ResultCallback<TokenData> callback )
         {
+            const bool clienSecretRequired = false;
             IHttpRequest request = HttpRequestBuilder.CreatePost(baseUrl + "/v3/oauth/token")
-                .WithBasicAuth(clientId, clientSecret)
+                .WithBasicAuth(clientId, clientSecret, clienSecretRequired)
                 .WithContentType(MediaType.ApplicationForm)
                 .Accepts(MediaType.ApplicationJson)
                 .WithFormParam("grant_type", "client_credentials")
@@ -78,7 +106,7 @@ namespace AccelByte.Server
 
             IHttpResponse response = null;
 
-            yield return httpClient.SendRequest(request, 
+            yield return httpClient.SendRequest(request,
                 rsp => response = rsp);
 
             Result<TokenData> result = response.TryParseJson<TokenData>();
@@ -96,8 +124,29 @@ namespace AccelByte.Server
 
             IHttpResponse response = null;
 
-            yield return httpClient.SendRequest(request, 
+            yield return httpClient.SendRequest(request,
                 rsp => response = rsp);
+
+            tokenData = null;
+            var result = response.TryParse();
+            coroutineRunner.Stop(maintainAccessTokenCoroutine);
+            maintainAccessTokenCoroutine = null;
+            callback.Try(result);
+        }
+
+        internal async void LogoutAsync(ResultCallback callback)
+        {
+            var request = HttpRequestBuilder.CreatePost(baseUrl + "/v3/oauth/revoke/token")
+                .WithBearerAuth(AuthorizationToken)
+                .WithContentType(MediaType.ApplicationForm)
+                .Accepts(MediaType.ApplicationJson)
+                .WithFormParam("token", AuthorizationToken)
+                .GetResult();
+
+            HttpSendResult sendResult = await httpClient.SendRequestAsync(request);
+
+            IHttpResponse response = sendResult.CallbackResponse;
+            Result<TokenData> getClientTokenResult = response.TryParseJson<TokenData>();
 
             tokenData = null;
             var result = response.TryParse();
@@ -123,6 +172,24 @@ namespace AccelByte.Server
                     callback.TryOk(result.Value);
                 }
             });
+        }
+
+        public IEnumerator GetJwks(ResultCallback<JwkSet> callback)
+        {
+            Report.GetFunctionLog(GetType().Name);
+            var request = HttpRequestBuilder.CreateGet(baseUrl + "/v3/oauth/jwks")
+                .GetResult();
+
+            IHttpResponse response = null;
+
+            yield return httpClient.SendRequest(request,
+                rsp =>
+                {
+                    response = rsp;
+                });
+
+            var result = response.TryParseJson<JwkSet>();
+            callback.Try(result);
         }
 
         public override void SetSession(TokenData loginResponse)

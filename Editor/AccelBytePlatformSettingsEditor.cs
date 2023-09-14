@@ -31,19 +31,26 @@ namespace AccelByte.Api
         private string[] presenceBroadcastEventGameStateList;
         private Rect logoRect;
 
-        private MultiOAuthConfigs originalOAuthConfigs;
+        private AccelByteAnalyticsSettings analyticsSettings;
+        private MultiOAuthConfigs originalClientOAuthConfigs;
+        private MultiOAuthConfigs originalAnalyticsOAuthConfigs;
         private MultiConfigs originalSdkConfigs;
-        private OAuthConfig editedOAuthConfig;
+        private OAuthConfig editedAnalyticsOAuthConfig;
+        private OAuthConfig editedClientOAuthConfig;
         private Config editedSdkConfig;
         private Vector2 scrollPos;
+        private bool showAnalyticsConfigs;
         private bool showCacheConfigs;
         private bool showOtherConfigs;
         private bool showLogConfigs;
         private bool showServiceUrlConfigs;
         private bool showTURNconfigs;
         private bool showPresenceBroadcastEventConfig;
+        private bool showPreDefinedEventConfig;
+        private bool showClientAnalyticsEventConfig;
         private GUIStyle requiredTextFieldGUIStyle;
         private bool initialized;
+        private bool generateServiceUrl = true;
 
         [MenuItem("AccelByte/Edit Settings")]
         public static void Edit()
@@ -102,6 +109,9 @@ namespace AccelByte.Api
                 temporaryPresenceBroadcastEventGameStateSetting = 0;
 
                 logoRect = new Rect((this.position.width - 300) / 2, 10, 300, 86);
+
+                analyticsSettings = new AccelByteAnalyticsSettings();
+
                 initialized = true;
             }
 
@@ -113,23 +123,45 @@ namespace AccelByte.Api
                     originalSdkConfigs = new MultiConfigs();
                 }
             }
-            if (originalOAuthConfigs == null)
+            if (originalClientOAuthConfigs == null)
             {
-                originalOAuthConfigs = AccelByteSettingsV2.LoadOAuthFile(GetPlatformName(platformList, temporaryPlatformSetting));
-                if (originalOAuthConfigs == null)
+                originalClientOAuthConfigs = AccelByteSettingsV2.LoadOAuthFile(GetPlatformName(platformList, temporaryPlatformSetting));
+                if (originalClientOAuthConfigs == null)
                 {
-                    originalOAuthConfigs = new MultiOAuthConfigs();
+                    originalClientOAuthConfigs = new MultiOAuthConfigs();
                 }
             }
+            if (originalAnalyticsOAuthConfigs == null)
+            {
+                try
+                {
+                    originalAnalyticsOAuthConfigs = analyticsSettings.LoadOAuthFile(GetPlatformName(platformList, temporaryPlatformSetting), false);
+                }
+                catch (Exception)
+                {
+
+                }
+                
+                if (originalAnalyticsOAuthConfigs == null)
+                {
+                    originalAnalyticsOAuthConfigs = new MultiOAuthConfigs();
+                }
+            }
+
             if (editedSdkConfig == null)
             {
                 var originalSdkConfig = AccelByteSettingsV2.GetSDKConfigByEnvironment(originalSdkConfigs, (SettingsEnvironment)temporaryEnvironmentSetting);
                 editedSdkConfig = originalSdkConfig != null ? originalSdkConfig.ShallowCopy() : new Config();
             }
-            if (editedOAuthConfig == null)
+            if (editedClientOAuthConfig == null)
             {
-                var originalOAuthConfig = AccelByteSettingsV2.GetOAuthByEnvironment(originalOAuthConfigs, (SettingsEnvironment)temporaryEnvironmentSetting);
-                editedOAuthConfig = originalOAuthConfig != null ? originalOAuthConfig.ShallowCopy() : new OAuthConfig();
+                var originalClientOAuthConfig = AccelByteSettingsV2.GetOAuthByEnvironment(originalClientOAuthConfigs, (SettingsEnvironment)temporaryEnvironmentSetting);
+                editedClientOAuthConfig = originalClientOAuthConfig != null ? originalClientOAuthConfig.ShallowCopy() : new OAuthConfig();
+            }
+            if (editedAnalyticsOAuthConfig == null)
+            {
+                var originalAnalyticsOAuthConfig = AccelByteSettingsV2.GetOAuthByEnvironment(originalAnalyticsOAuthConfigs, (SettingsEnvironment)temporaryEnvironmentSetting);
+                editedAnalyticsOAuthConfig = originalAnalyticsOAuthConfig != null ? originalAnalyticsOAuthConfig.ShallowCopy() : new OAuthConfig();
             }
         }
 
@@ -157,9 +189,10 @@ namespace AccelByte.Api
 
             {
                 var originalSdkConfig = AccelByteSettingsV2.GetSDKConfigByEnvironment(originalSdkConfigs, (SettingsEnvironment)temporaryEnvironmentSetting);
-                var originalOAuthConfig = AccelByteSettingsV2.GetOAuthByEnvironment(originalOAuthConfigs, (SettingsEnvironment)temporaryEnvironmentSetting);
+                var originalClientOAuthConfig = AccelByteSettingsV2.GetOAuthByEnvironment(originalClientOAuthConfigs, (SettingsEnvironment)temporaryEnvironmentSetting);
+                var originalAnalyticsOAuthConfig = AccelByteSettingsV2.GetOAuthByEnvironment(originalAnalyticsOAuthConfigs, (SettingsEnvironment)temporaryEnvironmentSetting);
 
-                if (CompareOAuthConfig(editedOAuthConfig, originalOAuthConfig) && CompareConfig(editedSdkConfig, originalSdkConfig))
+                if (CompareOAuthConfig(editedClientOAuthConfig, originalClientOAuthConfig) && CompareConfig(editedSdkConfig, originalSdkConfig) && CompareOAuthConfig(editedAnalyticsOAuthConfig, originalAnalyticsOAuthConfig))
                 {
                     EditorGUILayout.HelpBox("All configs has been saved!", MessageType.Info, true);
                 }
@@ -184,10 +217,12 @@ namespace AccelByte.Api
             if (EditorGUI.EndChangeCheck())
             {
                 var originalSdkConfig = AccelByteSettingsV2.GetSDKConfigByEnvironment(originalSdkConfigs, (SettingsEnvironment)temporaryEnvironmentSetting);
-                var originalOAuthConfig = AccelByteSettingsV2.GetOAuthByEnvironment(originalOAuthConfigs, (SettingsEnvironment)temporaryEnvironmentSetting);
+                var originalClientOAuthConfig = AccelByteSettingsV2.GetOAuthByEnvironment(originalClientOAuthConfigs, (SettingsEnvironment)temporaryEnvironmentSetting);
+                var originalAnalyticsOAuthConfig = AccelByteSettingsV2.GetOAuthByEnvironment(originalAnalyticsOAuthConfigs, (SettingsEnvironment)temporaryEnvironmentSetting);
 
                 editedSdkConfig = originalSdkConfig != null ? originalSdkConfig.ShallowCopy() : new Config();
-                editedOAuthConfig = originalOAuthConfig != null ? originalOAuthConfig.ShallowCopy() : new OAuthConfig();
+                editedClientOAuthConfig = originalClientOAuthConfig != null ? originalClientOAuthConfig.ShallowCopy() : new OAuthConfig();
+                editedAnalyticsOAuthConfig = originalAnalyticsOAuthConfig != null ? originalAnalyticsOAuthConfig.ShallowCopy() : new OAuthConfig();
             }
             EditorGUILayout.LabelField("");
             EditorGUILayout.EndHorizontal();
@@ -203,8 +238,18 @@ namespace AccelByte.Api
                 {
                     targetPlatform = platformList[temporaryPlatformSetting];
                 }
-                originalOAuthConfigs = AccelByteSettingsV2.LoadOAuthFile(targetPlatform);
-                editedOAuthConfig = originalOAuthConfigs != null ? AccelByteSettingsV2.GetOAuthByEnvironment(originalOAuthConfigs, (SettingsEnvironment)temporaryEnvironmentSetting) : new OAuthConfig();
+                originalClientOAuthConfigs = AccelByteSettingsV2.LoadOAuthFile(targetPlatform);
+                try
+                {
+                    originalAnalyticsOAuthConfigs = analyticsSettings.LoadOAuthFile(targetPlatform, false);
+                }
+                catch (Exception)
+                {
+                    originalAnalyticsOAuthConfigs = null;
+                }
+
+                editedClientOAuthConfig = originalClientOAuthConfigs != null ? AccelByteSettingsV2.GetOAuthByEnvironment(originalClientOAuthConfigs, (SettingsEnvironment)temporaryEnvironmentSetting) : new OAuthConfig();
+                editedAnalyticsOAuthConfig = originalClientOAuthConfigs != null ? AccelByteSettingsV2.GetOAuthByEnvironment(originalAnalyticsOAuthConfigs, (SettingsEnvironment)temporaryEnvironmentSetting) : new OAuthConfig();
             }
             EditorGUILayout.LabelField("");
             EditorGUILayout.EndHorizontal();
@@ -213,9 +258,16 @@ namespace AccelByte.Api
             CreateTextInput((newValue) => editedSdkConfig.RedirectUri = newValue, editedSdkConfig.RedirectUri, "Redirect Uri", true);
             CreateTextInput((newValue) => editedSdkConfig.Namespace = newValue, editedSdkConfig.Namespace, "Namespace", true);
             CreateTextInput((newValue) => editedSdkConfig.PublisherNamespace = newValue, editedSdkConfig.PublisherNamespace, "Publisher Namespace", true);
-            CreateTextInput((newValue) => editedOAuthConfig.ClientId = newValue, editedOAuthConfig.ClientId, "Client Id", true);
-            CreateTextInput((newValue) => editedOAuthConfig.ClientSecret = newValue, editedOAuthConfig.ClientSecret, "Client Secret");
+            CreateTextInput((newValue) => editedClientOAuthConfig.ClientId = newValue, editedClientOAuthConfig.ClientId, "Client Id", true);
+            CreateTextInput((newValue) => editedClientOAuthConfig.ClientSecret = newValue, editedClientOAuthConfig.ClientSecret, "Client Secret");
             CreateTextInput((newValue) => editedSdkConfig.AppId = newValue, editedSdkConfig.AppId, "App Id");
+
+            showAnalyticsConfigs = EditorGUILayout.Foldout(showAnalyticsConfigs, "Analytics Configs");
+            if (showAnalyticsConfigs)
+            {
+                CreateTextInput((newValue) => editedAnalyticsOAuthConfig.ClientId = newValue, editedAnalyticsOAuthConfig.ClientId, "Analytics Client Id");
+                CreateTextInput((newValue) => editedAnalyticsOAuthConfig.ClientSecret = newValue, editedAnalyticsOAuthConfig.ClientSecret, "Analytics Client Secret");
+            }
 
             showCacheConfigs = EditorGUILayout.Foldout(showCacheConfigs, "Cache Configs");
             if (showCacheConfigs)
@@ -268,23 +320,24 @@ namespace AccelByte.Api
             showServiceUrlConfigs = EditorGUILayout.Foldout(showServiceUrlConfigs, "Service Url Configs");
             if(showServiceUrlConfigs)
             {
-                CreateTextInput((newValue) => editedSdkConfig.IamServerUrl = newValue, editedSdkConfig.IamServerUrl, "IAM Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.PlatformServerUrl = newValue, editedSdkConfig.PlatformServerUrl, "Platform Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.BasicServerUrl = newValue, editedSdkConfig.BasicServerUrl, "Basic Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.LobbyServerUrl = newValue, editedSdkConfig.LobbyServerUrl, "Lobby Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.CloudStorageServerUrl = newValue, editedSdkConfig.CloudStorageServerUrl, "Cloud Storage Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.GameProfileServerUrl = newValue, editedSdkConfig.GameProfileServerUrl, "Game Profile Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.StatisticServerUrl = newValue, editedSdkConfig.StatisticServerUrl, "Statistic Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.AchievementServerUrl = newValue, editedSdkConfig.AchievementServerUrl, "Achievement Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.CloudSaveServerUrl = newValue, editedSdkConfig.CloudSaveServerUrl, "CloudSave Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.AgreementServerUrl = newValue, editedSdkConfig.AgreementServerUrl, "Agreement Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.LeaderboardServerUrl = newValue, editedSdkConfig.LeaderboardServerUrl, "Leaderboard Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.GameTelemetryServerUrl = newValue, editedSdkConfig.GameTelemetryServerUrl, "Game Telemetry Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.GroupServerUrl = newValue, editedSdkConfig.GroupServerUrl, "Group Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.SeasonPassServerUrl = newValue, editedSdkConfig.SeasonPassServerUrl, "Season Pass Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.SessionBrowserServerUrl = newValue, editedSdkConfig.SessionBrowserServerUrl, "Session BrowserServer Url");
-                CreateTextInput((newValue) => editedSdkConfig.SessionServerUrl = newValue, editedSdkConfig.SessionServerUrl, "Session Server Url");
-                CreateTextInput((newValue) => editedSdkConfig.MatchmakingV2ServerUrl = newValue, editedSdkConfig.MatchmakingV2ServerUrl, "MatchmakingV2 Server Url");
+                CreateToggleInput((newValue) => generateServiceUrl = newValue, generateServiceUrl, "Auto Generate Service Url");
+                CreateTextInput((newValue) => editedSdkConfig.IamServerUrl = newValue, editedSdkConfig.IamServerUrl, "IAM Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.PlatformServerUrl = newValue, editedSdkConfig.PlatformServerUrl, "Platform Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.BasicServerUrl = newValue, editedSdkConfig.BasicServerUrl, "Basic Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.LobbyServerUrl = newValue, editedSdkConfig.LobbyServerUrl, "Lobby Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.CloudStorageServerUrl = newValue, editedSdkConfig.CloudStorageServerUrl, "Cloud Storage Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.GameProfileServerUrl = newValue, editedSdkConfig.GameProfileServerUrl, "Game Profile Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.StatisticServerUrl = newValue, editedSdkConfig.StatisticServerUrl, "Statistic Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.AchievementServerUrl = newValue, editedSdkConfig.AchievementServerUrl, "Achievement Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.CloudSaveServerUrl = newValue, editedSdkConfig.CloudSaveServerUrl, "CloudSave Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.AgreementServerUrl = newValue, editedSdkConfig.AgreementServerUrl, "Agreement Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.LeaderboardServerUrl = newValue, editedSdkConfig.LeaderboardServerUrl, "Leaderboard Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.GameTelemetryServerUrl = newValue, editedSdkConfig.GameTelemetryServerUrl, "Game Telemetry Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.GroupServerUrl = newValue, editedSdkConfig.GroupServerUrl, "Group Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.SeasonPassServerUrl = newValue, editedSdkConfig.SeasonPassServerUrl, "Season Pass Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.SessionBrowserServerUrl = newValue, editedSdkConfig.SessionBrowserServerUrl, "Session BrowserServer Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.SessionServerUrl = newValue, editedSdkConfig.SessionServerUrl, "Session Server Url", false, generateServiceUrl);
+                CreateTextInput((newValue) => editedSdkConfig.MatchmakingV2ServerUrl = newValue, editedSdkConfig.MatchmakingV2ServerUrl, "MatchmakingV2 Server Url", false, generateServiceUrl);
             }
 
             showTURNconfigs = EditorGUILayout.Foldout(showTURNconfigs, "TURN Configs");
@@ -330,20 +383,42 @@ namespace AccelByte.Api
                 CreateTextInput((newValue) => editedSdkConfig.PresenceBroadcastEventGameStateDescription = newValue, editedSdkConfig.PresenceBroadcastEventGameStateDescription, "Set Game State description");
             }
 
+            showPreDefinedEventConfig = EditorGUILayout.Foldout(showPreDefinedEventConfig, "Pre-Defined Event Configs");
+            if (showPreDefinedEventConfig)
+            {
+                CreateToggleInput((newValue) => editedSdkConfig.EnablePreDefinedEvent = newValue, editedSdkConfig.EnablePreDefinedEvent, "Enable Pre-Defined Game Event");
+            }
+            
+            showClientAnalyticsEventConfig = EditorGUILayout.Foldout(showClientAnalyticsEventConfig, "Client Analytics Event Configs");
+            if (showClientAnalyticsEventConfig)
+            {
+                CreateToggleInput((newValue) => editedSdkConfig.EnableClientAnalyticsEvent = newValue, editedSdkConfig.EnableClientAnalyticsEvent, "Enable Client Analytics Event");
+                CreateNumberInput((newValue) => editedSdkConfig.ClientAnalyticsEventInterval = newValue, editedSdkConfig.ClientAnalyticsEventInterval, "Set Interval In Seconds");
+
+                const float minimalInterval = Core.ClientAnalyticsEventScheduler.ClientAnalyticsMiniumAllowedIntervalInlMs / 1000f;
+                if (editedSdkConfig.ClientAnalyticsEventInterval < minimalInterval)
+                {
+                    editedSdkConfig.ClientAnalyticsEventInterval = minimalInterval;
+                }
+            }
+
             EditorGUILayout.EndScrollView();
 
             EditorGUILayout.Space();
 
             if (GUILayout.Button("Save"))
             {
-                editedOAuthConfig.Expand();
+                editedClientOAuthConfig.Expand();
                 editedSdkConfig.SanitizeBaseUrl();
-                editedSdkConfig.Expand();
+                editedSdkConfig.Expand(generateServiceUrl);
 
-                originalOAuthConfigs = AccelByteSettingsV2.SetOAuthByEnvironment(originalOAuthConfigs, editedOAuthConfig, (SettingsEnvironment) temporaryEnvironmentSetting);
+                originalClientOAuthConfigs = AccelByteSettingsV2.SetOAuthByEnvironment(originalClientOAuthConfigs, editedClientOAuthConfig, (SettingsEnvironment) temporaryEnvironmentSetting);
                 originalSdkConfigs = AccelByteSettingsV2.SetSDKConfigByEnvironment(originalSdkConfigs, editedSdkConfig, (SettingsEnvironment)temporaryEnvironmentSetting);
-                AccelByteSettingsV2.SaveConfig(originalOAuthConfigs, AccelByteSettingsV2.OAuthFullPath(GetPlatformName(platformList, temporaryPlatformSetting)));
+                originalAnalyticsOAuthConfigs = AccelByteSettingsV2.SetOAuthByEnvironment(originalAnalyticsOAuthConfigs, editedAnalyticsOAuthConfig, (SettingsEnvironment)temporaryEnvironmentSetting);
+
+                AccelByteSettingsV2.SaveConfig(originalClientOAuthConfigs, AccelByteSettingsV2.OAuthFullPath(GetPlatformName(platformList, temporaryPlatformSetting)));
                 AccelByteSettingsV2.SaveConfig(originalSdkConfigs, AccelByteSettingsV2.SDKConfigFullPath(false));
+                AccelByteSettingsV2.SaveConfig(originalAnalyticsOAuthConfigs, AccelByteAnalyticsSettings.AnalyticsOAuthFullPath(GetPlatformName(platformList, temporaryPlatformSetting)));
             }
 
             EditorGUILayout.EndVertical();
@@ -367,19 +442,45 @@ namespace AccelByte.Api
             EditorGUILayout.EndHorizontal();
         }
 
-        private void CreateTextInput(Action<string> setter, string defaultValue, string fieldLabel, bool required = false)
+        private void CreateNumberInput(Action<float> setter, float defaultValue, string fieldLabel, bool required = false)
         {
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(fieldLabel);
-            var newValue = EditorGUILayout.TextField(defaultValue);
+            var newValue = EditorGUILayout.FloatField(defaultValue);
             setter?.Invoke(newValue);
 
             string requiredText = "";
-            if(required && string.IsNullOrEmpty(newValue))
+            if (required)
             {
                 requiredText = "Required";
             }
             EditorGUILayout.LabelField(requiredText, requiredTextFieldGUIStyle);
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void CreateTextInput(Action<string> setter, string defaultValue, string fieldLabel, bool required = false, bool @readonly = false)
+        {
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(fieldLabel);
+
+            if (!@readonly)
+            {
+                var newValue = EditorGUILayout.TextField(defaultValue);
+                setter?.Invoke(newValue);
+
+                string requiredText = "";
+                if (required && string.IsNullOrEmpty(newValue))
+                {
+                    requiredText = "Required";
+                }
+                EditorGUILayout.LabelField(requiredText, requiredTextFieldGUIStyle);
+            }
+            else
+            {
+                EditorGUILayout.LabelField(defaultValue);
+                EditorGUILayout.LabelField(string.Empty, requiredTextFieldGUIStyle);
+            }
 
             EditorGUILayout.EndHorizontal();
         }

@@ -572,6 +572,37 @@ namespace AccelByte.Api
         }
 
         /// <summary>
+        /// Update follow/unfollow status to user.
+        /// </summary>
+        /// <param name="followStatus">The new follow status value.</param>
+        /// <param name="userId">The userId.</param>
+        /// <param name="callback">This will be called when the operation succeeded.</param>
+        public void UpdateFollowStatus(bool followStatus
+            , string userId
+            , ResultCallback<UGCUpdateFollowStatusToUserResponse> callback)
+        {
+            Report.GetFunctionLog(GetType().Name);
+
+            if (!session.IsValid())
+            {
+                callback.TryError(ErrorCode.IsNotLoggedIn);
+                return;
+            }
+
+            var requestModel = new UpdateFollowStatusRequest()
+            {
+                FollowStatus = followStatus
+            };
+
+            var requestParameter = new UpdateFollowStatusParameter()
+            {
+                UserId = userId
+            };
+
+            coroutineRunner.Run(api.UpdateFollowStatus(requestModel, requestParameter, callback));
+        }
+
+        /// <summary>
         /// Get Bulk ContentId.
         /// </summary>
         /// <param name="contentId">The content Ids.</param>
@@ -719,8 +750,31 @@ namespace AccelByte.Api
         /// </summary>
         /// <param name="getLikedContentRequest">Detail information for the content request.</param>
         /// <param name="callback">This will be called when the operation succeeded.</param>
+        [Obsolete("This method will be deprecated in future, please use " +
+            "GetLikedContents( GetAllLikedContentRequest getLikedContentRequest ResultCallback<UGCContentsPagingResponse> callback)")]
         public void GetLikedContents(
             GetLikedContentRequest getLikedContentRequest
+            , ResultCallback<UGCContentsPagingResponse> callback)
+        {
+            Report.GetFunctionLog(GetType().Name);
+
+            if (!session.IsValid())
+            {
+                callback.TryError(ErrorCode.IsNotLoggedIn);
+                return;
+            }
+
+            coroutineRunner.Run(
+                api.GetLikedContents(getLikedContentRequest, callback));
+        }
+
+        /// <summary>
+        /// Get Liked Contents.
+        /// </summary>
+        /// <param name="getLikedContentRequest">Detail information for the content request.</param>
+        /// <param name="callback">This will be called when the operation succeeded.</param>
+        public void GetLikedContents(
+            GetAllLikedContentRequest getLikedContentRequest
             , ResultCallback<UGCContentsPagingResponse> callback)
         {
             Report.GetFunctionLog(GetType().Name);

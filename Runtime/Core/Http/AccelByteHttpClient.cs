@@ -61,6 +61,12 @@ namespace AccelByte.Core
             this.clientSecret = clientSecret;
         }
 
+        public HttpCredential GetCredentials()
+        {
+            HttpCredential retval = new HttpCredential(this.clientId, this.clientSecret);
+            return retval;
+        }
+
         public void SetImplicitPathParams(IDictionary<string, string> pathParams)
         {
             foreach (var param in pathParams)
@@ -155,8 +161,12 @@ namespace AccelByte.Core
             {
                 request = requestInput;
             }
-
-            this.ApplyImplicitAuthorization(request);
+            
+            this.ApplyImplicitAuthorization(request, out Error applyAuthErr);
+            if (applyAuthErr.Code != ErrorCode.None)
+            {
+                return new HttpSendResult(null, applyAuthErr);
+            }
             this.ApplyImplicitPathParams(request);
 
             if (!this.TryResolveUri(request))
@@ -201,7 +211,11 @@ namespace AccelByte.Core
                     if (IsBearerAuthRequestPaused())
                     {
                         request.Headers.Remove("Authorization");
-                        ApplyImplicitAuthorization(request);
+                        ApplyImplicitAuthorization(request, out Error applyErr);
+                        if (applyErr.Code != ErrorCode.None)
+                        {
+                            return new HttpSendResult(null, applyErr);
+                        }
                     }
                 }
 
@@ -316,7 +330,12 @@ namespace AccelByte.Core
                 request = requestInput;
             }
 
-            this.ApplyImplicitAuthorization(request);
+            this.ApplyImplicitAuthorization(request, out Error applyAuthErr);
+            if (applyAuthErr.Code != ErrorCode.None)
+            {
+                callback?.Invoke(null, applyAuthErr);
+                yield break;
+            }
             this.ApplyImplicitPathParams(request);
 
             if (!this.TryResolveUri(request))
@@ -363,7 +382,12 @@ namespace AccelByte.Core
                     if(IsBearerAuthRequestPaused())
                     {
                         request.Headers.Remove("Authorization");
-                        ApplyImplicitAuthorization(request);
+                        this.ApplyImplicitAuthorization(request, out Error applyError);
+                        if (applyError.Code != ErrorCode.None)
+                        {
+                            callback?.Invoke(null, applyAuthErr);
+                            yield break;
+                        }
                     }
                 }
 
@@ -489,14 +513,24 @@ namespace AccelByte.Core
             request.Url = formattedUrl;
         }
 
-        private void ApplyImplicitAuthorization(IHttpRequest request)
+        private void ApplyImplicitAuthorization(IHttpRequest request, out Error err)
         {
-            if (request == null) return;
+            Error errorResult = new Error(ErrorCode.None);
+            err = errorResult;
+
+            if (request == null)
+            {
+                errorResult = new Error(ErrorCode.InvalidRequest, "request object is null");
+                err = errorResult;
+                return;
+            }
 
             const string authHeaderKey = "Authorization";
 
             if (request.Headers != null && request.Headers.ContainsKey(authHeaderKey))
             {
+                errorResult = new Error(ErrorCode.None);
+                err = errorResult;
                 return;
             }
 
@@ -505,7 +539,9 @@ namespace AccelByte.Core
                 case HttpAuth.Basic:
                     if (string.IsNullOrEmpty(this.clientId))
                     {
-                        return;
+                        errorResult = new Error(ErrorCode.InvalidRequest, "failed to apply auth code from url :", request.Url);
+                        err = errorResult;
+                        break;
                     }
 
                     string base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{this.clientId}:{this.clientSecret}"));
@@ -514,7 +550,9 @@ namespace AccelByte.Core
                 case HttpAuth.Bearer:
                     if (string.IsNullOrEmpty(this.accessToken))
                     {
-                        return;
+                        errorResult = new Error(ErrorCode.IsNotLoggedIn, "failed to apply auth code from url :", request.Url);
+                        err = errorResult;
+                        break;
                     }
 
                     request.Headers[authHeaderKey] = "Bearer " + this.accessToken;

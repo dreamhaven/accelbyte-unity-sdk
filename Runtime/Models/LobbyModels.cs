@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using UnityEngine.Scripting;
 
 namespace AccelByte.Models
@@ -73,10 +74,14 @@ namespace AccelByte.Models
         unfriendResponse,
         listOutgoingFriendsRequest,
         listOutgoingFriendsResponse,
+        listOutgoingFriendsWithTimeRequest,
+        listOutgoingFriendsWithTimeResponse,
         cancelFriendsRequest,
         cancelFriendsResponse,
         listIncomingFriendsRequest,
         listIncomingFriendsResponse,
+        listIncomingFriendsWithTimeRequest,
+        listIncomingFriendsWithTimeResponse,
         acceptFriendsRequest,
         acceptFriendsResponse,
         rejectFriendsRequest,
@@ -158,6 +163,9 @@ namespace AccelByte.Models
         OnMatchFound,
         OnMatchmakingStarted,
         OnMatchmakingTicketExpired,
+
+        // SessionV2Storage
+        OnSessionStorageChanged,
     }
     
     [DataContract, Preserve]
@@ -482,6 +490,7 @@ namespace AccelByte.Models
         [DataMember] public string message;
         // rejected status error code
         [DataMember] public int errorCode;
+        [DataMember] public string region;
     }
 
     [DataContract, Preserve]
@@ -571,6 +580,19 @@ namespace AccelByte.Models
     public class Friends
     {
         [DataMember] public string[] friendsId;
+    }
+    
+    [DataContract, Preserve]
+    public class FriendWithTimestampData
+    {
+        [DataMember] public string friendId;
+        [DataMember] public DateTime requestedAt;
+    }
+    
+    [DataContract, Preserve]
+    public class FriendsWithTimestamp
+    {
+        [DataMember] public FriendWithTimestampData[] data;
     }
 
     [DataContract, Preserve]
@@ -849,6 +871,20 @@ namespace AccelByte.Models
     {
         [DataMember] public string destinationId;
         [DataMember] public string message;
+    }
+
+    #endregion
+
+    #region SessionStorage
+
+    [DataContract, Preserve]
+    public class SessionStorageChangedNotification
+    {
+        [DataMember(Name = "namespace")] public string Namespace;
+        [DataMember(Name = "sessionID")] public string SessionID;
+        [DataMember(Name = "actorUserID")] public string ActorUserID;
+        [DataMember(Name = "isLeader")] public bool IsLeader;
+        [DataMember(Name = "storageChanges")] public JObject StorageChanges;
     }
 
     #endregion

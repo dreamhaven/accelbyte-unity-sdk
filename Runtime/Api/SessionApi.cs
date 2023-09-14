@@ -1,6 +1,7 @@
 ﻿// Copyright (c) 2022 - 2023 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
+
 using System.Collections;
 using System.Collections.Generic;
 using AccelByte.Core;
@@ -327,6 +328,92 @@ namespace AccelByte.Api
             callback.Try(result);
         }
 
+        public IEnumerator JoinPartyByCode(string code
+            , ResultCallback<SessionV2PartySession> callback)
+        {
+            Assert.IsNotNull(Namespace_, nameof(Namespace_) + " cannot be null");
+            Assert.IsNotNull(AuthToken, nameof(AuthToken) + " cannot be null");
+            Assert.IsNotNull(code, nameof(code) + " cannot be null");
+
+            SessionV2JoinByCodeRequest body = new SessionV2JoinByCodeRequest { Code = code };
+
+            var request = HttpRequestBuilder
+                .CreatePost(BaseUrl + "/v1/public/namespaces/{namespace}/parties/users/me/join/code")
+                .WithPathParam("namespace", Namespace_)
+                .WithBody(body.ToUtf8Json())
+                .WithBearerAuth(AuthToken)
+                .WithContentType(MediaType.ApplicationJson)
+                .Accepts(MediaType.ApplicationJson)
+                .GetResult();
+
+            IHttpResponse response = null;
+
+            yield return HttpClient.SendRequest(request, rsp =>
+            {
+                response = rsp;
+            });
+
+            var result = response.TryParseJson<SessionV2PartySession>();
+
+            callback.Try(result);
+        }
+
+        public IEnumerator GenerateNewPartyCode(string partyId
+            , ResultCallback<SessionV2PartySession> callback)
+        {
+            Assert.IsNotNull(Namespace_, nameof(Namespace_) + " cannot be null");
+            Assert.IsNotNull(AuthToken, nameof(AuthToken) + " cannot be null");
+            Assert.IsNotNull(partyId, nameof(partyId) + " cannot be null");
+
+            var request = HttpRequestBuilder
+                .CreatePost(BaseUrl + "/v1/public/namespaces/{namespace}/parties/{partyId}/code")
+                .WithPathParam("namespace", Namespace_)
+                .WithPathParam("partyId", partyId)
+                .WithBearerAuth(AuthToken)
+                .WithContentType(MediaType.ApplicationJson)
+                .Accepts(MediaType.ApplicationJson)
+                .GetResult();
+
+            IHttpResponse response = null;
+
+            yield return HttpClient.SendRequest(request, rsp =>
+            {
+                response = rsp;
+            });
+
+            var result = response.TryParseJson<SessionV2PartySession>();
+
+            callback.Try(result);
+        }
+
+        public IEnumerator RevokePartyCode(string partyId
+            , ResultCallback callback)
+        {
+            Assert.IsNotNull(Namespace_, nameof(Namespace_) + " cannot be null");
+            Assert.IsNotNull(AuthToken, nameof(AuthToken) + " cannot be null");
+            Assert.IsNotNull(partyId, nameof(partyId) + " cannot be null");
+
+            var request = HttpRequestBuilder
+                .CreateDelete(BaseUrl + "/v1/public/namespaces/{namespace}/parties/{partyId}/code")
+                .WithPathParam("namespace", Namespace_)
+                .WithPathParam("partyId", partyId)
+                .WithBearerAuth(AuthToken)
+                .WithContentType(MediaType.ApplicationJson)
+                .Accepts(MediaType.ApplicationJson)
+                .GetResult();
+
+            IHttpResponse response = null;
+
+            yield return HttpClient.SendRequest(request, rsp =>
+            {
+                response = rsp;
+            });
+
+            var result = response.TryParse();
+
+            callback.Try(result);
+        }
+
         #endregion
 
         #region GameSession
@@ -626,6 +713,177 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParseJson<PaginatedResponse<SessionV2GameSession>>();
+
+            callback.Try(result);
+        }
+
+        public IEnumerator JoinGameSessionByCode(string code
+            , ResultCallback<SessionV2GameSession> callback)
+        {
+            Assert.IsNotNull(Namespace_, nameof(Namespace_) + " cannot be null");
+            Assert.IsNotNull(AuthToken, nameof(AuthToken) + " cannot be null");
+            Assert.IsNotNull(code, nameof(code) + " cannot be null");
+
+            SessionV2JoinByCodeRequest body = new SessionV2JoinByCodeRequest { Code = code };
+
+            var request = HttpRequestBuilder
+                .CreatePost(BaseUrl + "/v1/public/namespaces/{namespace}/gamesessions/join/code")
+                .WithPathParam("namespace", Namespace_)
+                .WithBody(body.ToUtf8Json())
+                .WithBearerAuth(AuthToken)
+                .WithContentType(MediaType.ApplicationJson)
+                .Accepts(MediaType.ApplicationJson)
+                .GetResult();
+
+            IHttpResponse response = null;
+
+            yield return HttpClient.SendRequest(request, rsp =>
+            {
+                response = rsp;
+            });
+
+            var result = response.TryParseJson<SessionV2GameSession>();
+
+            callback.Try(result);
+        }
+
+        public IEnumerator GenerateNewGameSessionCode(string sessionId
+            , ResultCallback<SessionV2GameSession> callback)
+        {
+            Assert.IsNotNull(Namespace_, nameof(Namespace_) + " cannot be null");
+            Assert.IsNotNull(AuthToken, nameof(AuthToken) + " cannot be null");
+            Assert.IsNotNull(sessionId, nameof(sessionId) + " cannot be null");
+
+            var request = HttpRequestBuilder
+                .CreatePost(BaseUrl + "/v1/public/namespaces/{namespace}/gamesessions/{sessionId}/code")
+                .WithPathParam("namespace", Namespace_)
+                .WithPathParam("sessionId", sessionId)
+                .WithBearerAuth(AuthToken)
+                .WithContentType(MediaType.ApplicationJson)
+                .Accepts(MediaType.ApplicationJson)
+                .GetResult();
+
+            IHttpResponse response = null;
+
+            yield return HttpClient.SendRequest(request, rsp =>
+            {
+                response = rsp;
+            });
+
+            var result = response.TryParseJson<SessionV2GameSession>();
+
+            callback.Try(result);
+        }
+
+        public IEnumerator RevokeGameSessionCode(string sessionId
+            , ResultCallback callback)
+        {
+            Assert.IsNotNull(Namespace_, nameof(Namespace_) + " cannot be null");
+            Assert.IsNotNull(AuthToken, nameof(AuthToken) + " cannot be null");
+            Assert.IsNotNull(sessionId, nameof(sessionId) + " cannot be null");
+
+            var request = HttpRequestBuilder
+                .CreateDelete(BaseUrl + "/v1/public/namespaces/{namespace}/gamesessions/{sessionId}/code")
+                .WithPathParam("namespace", Namespace_)
+                .WithPathParam("sessionId", sessionId)
+                .WithBearerAuth(AuthToken)
+                .WithContentType(MediaType.ApplicationJson)
+                .Accepts(MediaType.ApplicationJson)
+                .GetResult();
+
+            IHttpResponse response = null;
+
+            yield return HttpClient.SendRequest(request, rsp =>
+            {
+                response = rsp;
+            });
+
+            var result = response.TryParse();
+
+            callback.Try(result);
+        }
+
+        #endregion
+
+        #region SessionStorage
+
+        public IEnumerator UpdateLeaderStorage(string sessionId, JObject data, ResultCallback<JObject> callback)
+        {
+            if (string.IsNullOrEmpty(Namespace_))
+            {
+                callback.TryError(new Error(ErrorCode.BadRequest, nameof(Namespace_) + " cannot be null or empty"));
+                yield break;
+            }
+            if (string.IsNullOrEmpty(AuthToken))
+            {
+                callback.TryError(new Error(ErrorCode.BadRequest, nameof(AuthToken) + " cannot be null or empty"));
+                yield break;
+            }
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                callback.TryError(new Error(ErrorCode.BadRequest, nameof(sessionId) + " cannot be null or empty"));
+                yield break;
+            }
+
+            var request = HttpRequestBuilder
+                .CreatePatch(BaseUrl + "/v1/public/namespaces/{namespace}/sessions/{sessionId}/storage/leader")
+                .WithPathParam("namespace", Namespace_)
+                .WithPathParam("sessionId", sessionId)
+                .WithBearerAuth(AuthToken)
+                .WithContentType(MediaType.ApplicationJson)
+                .WithBody(data.ToUtf8Json())
+                .Accepts(MediaType.ApplicationJson)
+                .GetResult();
+
+            IHttpResponse response = null;
+
+            yield return HttpClient.SendRequest(request, rsp =>
+            {
+                response = rsp;
+            });
+
+            var result = response.TryParseJson<JObject>();
+
+            callback.Try(result);
+        }
+
+        public IEnumerator UpdateMemberStorage(string userId, string sessionId, JObject data, ResultCallback<JObject> callback)
+        {
+            if (string.IsNullOrEmpty(Namespace_))
+            {
+                callback.TryError(new Error(ErrorCode.BadRequest, nameof(Namespace_) + " cannot be null or empty"));
+                yield break;
+            }
+            if (string.IsNullOrEmpty(AuthToken))
+            {
+                callback.TryError(new Error(ErrorCode.BadRequest, nameof(AuthToken) + " cannot be null or empty"));
+                yield break;
+            }
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                callback.TryError(new Error(ErrorCode.BadRequest, nameof(sessionId) + " cannot be null or empty"));
+                yield break;
+            }
+
+            var request = HttpRequestBuilder
+                .CreatePatch(BaseUrl + "/v1/public/namespaces/{namespace}/sessions/{sessionId}/storage/users/{userId}")
+                .WithPathParam("namespace", Namespace_)
+                .WithPathParam("sessionId", sessionId)
+                .WithPathParam("userId", userId)
+                .WithBearerAuth(AuthToken)
+                .WithContentType(MediaType.ApplicationJson)
+                .WithBody(data.ToUtf8Json())
+                .Accepts(MediaType.ApplicationJson)
+                .GetResult();
+
+            IHttpResponse response = null;
+
+            yield return HttpClient.SendRequest(request, rsp =>
+            {
+                response = rsp;
+            });
+
+            var result = response.TryParseJson<JObject>();
 
             callback.Try(result);
         }

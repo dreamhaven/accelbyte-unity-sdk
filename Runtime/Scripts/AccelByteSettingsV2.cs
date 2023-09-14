@@ -475,6 +475,8 @@ namespace AccelByte.Api
             switch (Application.platform)
             {
                 case RuntimePlatform.WindowsEditor:
+                case RuntimePlatform.WindowsPlayer:
+                case RuntimePlatform.LinuxEditor:
                 case RuntimePlatform.LinuxPlayer:
                     if (Resources.Load(AccelByteSettingsV2.OAuthResourcePath(PlatformType.Steam.ToString(), isServer)) != null)
                     {
@@ -562,7 +564,7 @@ namespace AccelByte.Api
             }
 
             multiOAuthConfigs.Expand();
-            multiConfigs.Expand();
+            multiConfigs.Expand(false);
 
             oAuthConfig = multiOAuthConfigs.GetConfigFromEnvironment(environment);
             if (isServer)

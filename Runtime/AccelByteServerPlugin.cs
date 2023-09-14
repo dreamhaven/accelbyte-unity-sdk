@@ -41,12 +41,14 @@ namespace AccelByte.Server
         private static ServerUserAccount userAccount;
         private static ServerSeasonPass seasonPass;
         private static ServiceVersion serviceVersion;
+        private static ServerAnalyticsService serverAnalyticsService;
 
         private static bool initialized = false;
-        private static SettingsEnvironment activeEnvironment = SettingsEnvironment.Default;
         internal static event Action configReset;
         public static event Action<SettingsEnvironment> environmentChanged;
         private static IHttpRequestSender defaultHttpSender = null;
+
+        private static PredefinedEventScheduler predefinedEventScheduler = null;
 
         internal static OAuthConfig OAuthConfig
         {
@@ -115,6 +117,8 @@ namespace AccelByte.Server
         {
             ResetApis();
 
+            var activeEnvironment = AccelByteSDK.Environment != null ? AccelByteSDK.Environment.Current : SettingsEnvironment.Default;
+
             AccelByteSettingsV2 newSettings;
             if (inConfig == null && inOAuthConfig == null)
             {
@@ -126,8 +130,23 @@ namespace AccelByte.Server
                 newSettings = new AccelByteSettingsV2(inOAuthConfig, inConfig);
             }
 
-            newSettings.OAuthConfig.CheckRequiredField();
-            newSettings.ServerSdkConfig.CheckRequiredField();
+            try
+            {
+                newSettings.ServerSdkConfig.CheckRequiredField();
+            }
+            catch (Exception ex)
+            {
+                AccelByteDebug.LogWarning(ex.Message);
+            }
+
+            try
+            {
+                newSettings.OAuthConfig.CheckRequiredField();
+            }
+            catch (Exception ex)
+            {
+                AccelByteDebug.LogWarning(ex.Message);
+            }
 
             settings = newSettings;
 
@@ -143,6 +162,17 @@ namespace AccelByte.Server
 
             session = CreateServerSessionClient(settings.ServerSdkConfig, settings.OAuthConfig, httpClient, coroutineRunner);
             server = CreateDedicatedServerClient(session, coroutineRunner);
+
+            serverAnalyticsService = CreateServerAnalyticsService(settings.ServerSdkConfig, httpClient, coroutineRunner, server.Session);
+            predefinedEventScheduler = new PredefinedEventScheduler(serverAnalyticsService);
+            predefinedEventScheduler.SetEventEnabled(settings.ServerSdkConfig.EnablePreDefinedEvent);
+            PredefinedGameStateCommand.GlobalGameStateCommand.SetPredefinedEventScheduler(ref predefinedEventScheduler);
+
+            if (AccelByteSDK.Environment != null)
+            {
+                AccelByteSDK.Environment.OnEnvironmentChanged += UpdateEnvironment;
+                AccelByteSDK.Environment.OnEnvironmentChanged += environmentChanged;
+            }
 
             initialized = true;
         }
@@ -648,36 +678,80 @@ namespace AccelByte.Server
                 coroutineRunner));
         }
 
-        public static void SetEnvironment(SettingsEnvironment environment)
+        public static ServerAnalyticsService GetServerAnalyticsService()
         {
             CheckPlugin();
-            activeEnvironment = environment;
-            string activePlatform = AccelByteSettingsV2.GetActivePlatform(true);
-            var newSettings = RetrieveConfigFromJsonFile(activePlatform, activeEnvironment);
-            if (newSettings.ServerSdkConfig.IsRequiredFieldEmpty())
-            {
-                activeEnvironment = SettingsEnvironment.Default;
-                newSettings = RetrieveConfigFromJsonFile(activePlatform, activeEnvironment);
-            }
-            if (newSettings.OAuthConfig.IsRequiredFieldEmpty())
-            {
-                newSettings = RetrieveConfigFromJsonFile("", activeEnvironment);
-            }
-            settings = newSettings;
+            return serverAnalyticsService;
+        }
 
-            HttpRequestBuilder.SetNamespace(settings.ServerSdkConfig.Namespace);
+        private static ServerAnalyticsService CreateServerAnalyticsService(ServerConfig newSdkConfig,
+            IHttpClient httpClient,
+            CoroutineRunner coroutineRunner,
+            ISession IamSession)
+        {
+            serverAnalyticsService = new ServerAnalyticsService(
+            new ServerAnalyticsApi(
+                httpClient,
+                newSdkConfig,
+                IamSession),
+            IamSession,
+            coroutineRunner);
 
-            session = CreateServerSessionClient(settings.ServerSdkConfig, settings.OAuthConfig, httpClient, coroutineRunner);
-            server = CreateDedicatedServerClient(session, coroutineRunner);
-            if (configReset != null) 
-            { 
-                configReset.Invoke(); 
+            return serverAnalyticsService;
+        }
+
+        #region Environment
+        [Obsolete("Use AccelByteSDK.Environment.Set() to update environment target")]
+        public static void SetEnvironment(SettingsEnvironment newEnvironment)
+        {
+            CheckPlugin();
+
+            if (AccelByteSDK.Environment != null)
+            {
+                AccelByteSDK.Environment.Set(newEnvironment);
             }
-            if (environmentChanged != null) 
-            { 
-                environmentChanged.Invoke(activeEnvironment); 
+            else
+            {
+                UpdateEnvironment(newEnvironment);
             }
         }
+
+        [Obsolete("Use AccelByteSDK.Environment.Current to get current environment target")]
+        public static SettingsEnvironment GetEnvironment()
+        {
+            return AccelByteSDK.Environment != null ? AccelByteSDK.Environment.Current : SettingsEnvironment.Default;
+        }
+
+        static void UpdateEnvironment(SettingsEnvironment newEnvironment)
+        {
+            try
+            {
+                string activePlatform = AccelByteSettingsV2.GetActivePlatform(true);
+                var newSettings = RetrieveConfigFromJsonFile(activePlatform, newEnvironment);
+                if (newSettings.ServerSdkConfig.IsRequiredFieldEmpty())
+                {
+                    newEnvironment = SettingsEnvironment.Default;
+                    newSettings = RetrieveConfigFromJsonFile(activePlatform, newEnvironment);
+                }
+                if (newSettings.OAuthConfig.IsRequiredFieldEmpty())
+                {
+                    newSettings = RetrieveConfigFromJsonFile("", newEnvironment);
+                }
+                settings = newSettings;
+
+                HttpRequestBuilder.SetNamespace(settings.ServerSdkConfig.Namespace);
+
+                session = CreateServerSessionClient(settings.ServerSdkConfig, settings.OAuthConfig, httpClient, coroutineRunner);
+                server = CreateDedicatedServerClient(session, coroutineRunner);
+
+                configReset?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                AccelByteDebug.LogWarning(ex.Message);
+            }
+        }
+        #endregion
 
         private static void ResetApis()
         {
@@ -695,12 +769,14 @@ namespace AccelByte.Server
             seasonPass = null;
             configReset = null;
             environmentChanged = null;
-        }
+            serverAnalyticsService = null;
 
-        public static SettingsEnvironment GetEnvironment()
-        {
-            CheckPlugin();
-            return activeEnvironment;
+            if (predefinedEventScheduler != null)
+            {
+                predefinedEventScheduler.SetEventEnabled(false);
+                predefinedEventScheduler.Dispose();
+                predefinedEventScheduler = null;
+            }
         }
 
         public static void ClearEnvironmentChangedEvent()

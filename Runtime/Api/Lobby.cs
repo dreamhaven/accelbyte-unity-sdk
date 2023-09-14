@@ -132,6 +132,11 @@ namespace AccelByte.Api
         public event ResultCallback<SessionV2DsStatusUpdatedNotification> SessionV2DsStatusChanged;
 
         /// <summary>
+        /// SessionV2 - Raised when session storage changed
+        /// </summary>
+        public event ResultCallback<SessionStorageChangedNotification> SessionV2StorageChanged;
+
+        /// <summary>
         /// MatchmakingV2 - Raised when match is found
         /// </summary>
         public event ResultCallback<MatchmakingV2MatchFoundNotification> MatchmakingV2MatchFound;
@@ -760,6 +765,18 @@ namespace AccelByte.Api
             Report.GetFunctionLog(GetType().Name);
             websocketApi.ListOutgoingFriends(callback);
         }
+        
+        /// <summary>
+        /// Send list of outgoing friends request with added timestamp.
+        /// </summary>
+        /// <param name="callback">
+        /// Returns a Result that contains FriendsWithTimestamp via callback when completed.
+        /// </param>
+        public void ListOutgoingFriendsWithTime(ResultCallback<FriendsWithTimestamp> callback)
+        {
+            Report.GetFunctionLog(GetType().Name);
+            websocketApi.ListOutgoingFriendsWithTime(callback);
+        }
 
         /// <summary>
         /// Send cancel friend request.
@@ -783,6 +800,18 @@ namespace AccelByte.Api
         {
             Report.GetFunctionLog(GetType().Name);
             websocketApi.ListIncomingFriends(callback);
+        }
+        
+        /// <summary>
+        /// Send list of incoming friends request with added timestamp
+        /// </summary>
+        /// <param name="callback">
+        /// Returns a Result that contains FriendsWithTimestamp via callback when completed.
+        /// </param>
+        public void ListIncomingFriendsWithTime(ResultCallback<FriendsWithTimestamp> callback)
+        {
+            Report.GetFunctionLog(GetType().Name);
+            websocketApi.ListIncomingFriendsWithTime(callback);
         }
 
         /// <summary>
@@ -1886,6 +1915,11 @@ namespace AccelByte.Api
                         JsonConvert.DeserializeObject<MatchmakingV2TicketExpiredNotification>(jsonString);
                     websocketApi.DispatchNotification(ticketExpiredNotification,
                         MatchmakingV2TicketExpired);
+                    break;
+                case MultiplayerV2NotifType.OnSessionStorageChanged:
+                    var sessionStorageChangedNotification =
+                        JsonConvert.DeserializeObject<SessionStorageChangedNotification>(jsonString);
+                    websocketApi.DispatchNotification(sessionStorageChangedNotification, SessionV2StorageChanged);
                     break;
                 default:
                     AccelByteDebug.LogWarning($"MultiplayerV2 notification type {notificationType} not supported");

@@ -10,8 +10,11 @@ namespace AccelByte.Api
 {
     public class GameStandardAnalyticsServiceBase<TAnalyticsWrapper> : WrapperBase where TAnalyticsWrapper : IAccelByteAnalyticsWrapper
     {
+#if UNITY_SWITCH
+        internal static readonly string DefaultCacheDirectory = string.Empty;
+#else
         internal static readonly string DefaultCacheDirectory = $"{Application.persistentDataPath}/AccelByte/{Application.productName}/";
-
+#endif
         internal GameStandardEventScheduler<TAnalyticsWrapper> Scheduler
         {
             get;

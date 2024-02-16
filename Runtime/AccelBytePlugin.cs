@@ -327,7 +327,12 @@ namespace AccelByte.Api
         {
             string sessionCacheTableName = $"TokenCache/{environment}/TokenData";
 
-            IAccelByteDataStorage dataStorage = new Core.AccelByteDataStorageBinaryFile(accelByteFileStream);
+            IAccelByteDataStorage dataStorage =
+#if UNITY_SWITCH
+                new Core.AccelByteDataStorageMemory();
+#else
+                new Core.AccelByteDataStorageBinaryFile(accelByteFileStream);
+#endif
 
             var newSession = new UserSession(
                 httpClient,

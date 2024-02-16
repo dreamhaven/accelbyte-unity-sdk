@@ -18,7 +18,9 @@ namespace AccelByte.Api
         public readonly string DeviceType;
         public readonly string UniqueId;
 
+#if !UNITY_SWITCH
         public static string DefaultGeneratedIdCacheFileDir = $"{Application.persistentDataPath}/AccelByte/{Application.productName}/";
+#endif
         public static string CacheFileName = "DeviceId";
 
         public static string EncodeHMAC(string macAddress, string key)
@@ -61,7 +63,7 @@ namespace AccelByte.Api
 
             if (string.IsNullOrEmpty(platformUniqueIdentifier))
             {
-#if !UNITY_WEBGL
+#if !UNITY_WEBGL && !UNITY_SWITCH
                 try
                 {
                     if (string.IsNullOrEmpty(generatedIdCacheFileDir))
@@ -103,7 +105,7 @@ namespace AccelByte.Api
                 platformUniqueIdentifier);
         }
 
-#if !UNITY_WEBGL
+#if !UNITY_WEBGL && !UNITY_SWITCH
         public static void CacheDeviceId(string cachedDeviceId, string generatedIdCacheFileDir = null)
         {
             try

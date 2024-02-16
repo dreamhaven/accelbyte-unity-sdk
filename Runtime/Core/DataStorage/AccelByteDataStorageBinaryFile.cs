@@ -9,6 +9,7 @@ using UnityEngine;
 
 namespace AccelByte.Core
 {
+#if !UNITY_SWITCH
     internal class AccelByteDataStorageBinaryFile : IAccelByteDataStorage
     {
         internal static readonly string RootPath = $"{Application.persistentDataPath}/AccelByte/{Application.productName}";
@@ -134,4 +135,5 @@ namespace AccelByte.Core
             return retval;
         }
     }
+#endif
 }

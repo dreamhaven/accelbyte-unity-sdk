@@ -28,8 +28,6 @@ namespace AccelByte.Api
         //Constants
         internal const string AuthorizationCodeEnvironmentVariable = "JUSTICE_AUTHORIZATION_CODE";
 
-        internal static readonly string DefaultPlatformCacheDirectory = Application.persistentDataPath + "/AccelByte/PlatformLoginCache/" + Application.productName;
-
         internal Action<TokenData> OnLoginSuccess;
         internal Action OnLogout;
 

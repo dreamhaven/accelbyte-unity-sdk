@@ -88,7 +88,13 @@ namespace AccelByte.Api
             (IHttpClient inHttpClient
             , CoroutineRunner inCoroutineRunner
             , string encodeUniqueKey
-            , bool inUsePlayerPrefs = false) : this(inHttpClient, inCoroutineRunner, encodeUniqueKey, inUsePlayerPrefs, "TokenCache/TokenData", new Core.AccelByteDataStorageBinaryFile(AccelByteSDK.FileStream))
+            , bool inUsePlayerPrefs = false) : this(inHttpClient, inCoroutineRunner, encodeUniqueKey, inUsePlayerPrefs, "TokenCache/TokenData", 
+#if UNITY_SWITCH
+            new Core.AccelByteDataStorageMemory()
+#else
+            new Core.AccelByteDataStorageBinaryFile(AccelByteSDK.FileStream)
+#endif
+            )
         {
 
         }

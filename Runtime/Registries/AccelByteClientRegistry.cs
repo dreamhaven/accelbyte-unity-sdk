@@ -277,7 +277,12 @@ namespace AccelByte.Api
             IHttpClient httpClient = CreateHtppClient();
 
             string sessionCacheTableName = $"TokenCache/{environment}/TokenData";
-            IAccelByteDataStorage dataStorage = new Core.AccelByteDataStorageBinaryFile(AccelByteSDK.FileStream);
+            IAccelByteDataStorage dataStorage =
+#if UNITY_SWITCH
+                new Core.AccelByteDataStorageMemory();
+#else
+                new Core.AccelByteDataStorageBinaryFile(AccelByteSDK.FileStream);
+#endif
             var session = new UserSession(
                     httpClient,
                     coroutineRunner,

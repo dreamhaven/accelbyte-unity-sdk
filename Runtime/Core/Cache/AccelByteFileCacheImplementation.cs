@@ -9,7 +9,7 @@ namespace AccelByte.Core
 {
     internal class AccelByteFileCacheImplementation : IAccelByteCacheImplementation<string>
     {
-#if !UNITY_WEBGL
+#if !UNITY_WEBGL && !UNITY_SWITCH
         readonly string cacheDirectory = string.Empty;
         const int readWriteAsyncWaitMs = 100;
 

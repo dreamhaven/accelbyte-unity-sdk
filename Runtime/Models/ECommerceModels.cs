@@ -67,7 +67,8 @@ namespace AccelByte.Models
         ACTIVE,
         INACTIVE,
         CONSUMED,
-        REVOKED
+        REVOKED,
+        SOLD
     }
 
     [JsonConverter(typeof(StringEnumConverter)), System.Serializable]
@@ -1158,7 +1159,7 @@ namespace AccelByte.Models
     }
 
     [Preserve]
-    public class QueryUserSubscriptionRequestOptionalParameters
+    public class QueryUserSubscriptionRequestOptionalParameters : OptionalParametersBase
     {
         /// <summary>
         /// Optional param for set the result offset
@@ -1241,7 +1242,7 @@ namespace AccelByte.Models
     }
 
     [Preserve]
-    public class GetUserEntitlementHistoryOptionalParams
+    public class GetUserEntitlementHistoryOptionalParams : OptionalParametersBase
     {
         /// <summary>
         /// Filter entitlement query based on Clazz.
@@ -1545,7 +1546,8 @@ namespace AccelByte.Models
     public class EntitlementSoldRequest
     {
         [DataMember(Name = "useCount")] public int UseCount;
-        [DataMember(Name = "requestId")] public string RequestId;
+
+        [DataMember(Name = "requestId")] internal string RequestId;
     }
 
     [DataContract, Preserve]
@@ -1784,10 +1786,15 @@ namespace AccelByte.Models
         /// Optional param for product language
         /// </summary>
         public string Language = null;
+        /// <summary>
+        /// Accelbyte logger instance to use logging functions within the interface.
+        /// </summary>
+        internal IDebugger Logger;
+        internal Utils.IApiTracker ApiTracker;
     }
 
     [Preserve]
-    public class PlatformSyncMobileGoogleOptionalParameters
+    public class PlatformSyncMobileGoogleOptionalParameters : OptionalParametersBase
     {
         /// <summary>
         /// Optional param for AutoConsume.
@@ -1805,7 +1812,7 @@ namespace AccelByte.Models
     }
 
     [Preserve]
-    public class SyncSteamInventoryOptionalParameters
+    public class SyncSteamInventoryOptionalParameters : OptionalParametersBase
     {
         /// <summary>
         /// Optional param for product region
@@ -1940,5 +1947,62 @@ namespace AccelByte.Models
         [DataMember] public OrderStatus Status = OrderStatus.INIT;
         [DataMember] public int Offset = 0;
         [DataMember] public int Limit = 20;
+    }
+
+    [Preserve]
+    public class GetCurrencyListOptionalParameters : OptionalParametersBase
+    {
+        /// <summary>
+        /// Filter returned results via their Currency Type.
+        /// </summary>
+        public CurrencyType? CurrencyType = Models.CurrencyType.NONE;
+    }
+
+    [Preserve]
+    public class SellUserEntitlementOptionalParameters : OptionalParametersBase
+    {
+        /// <summary>
+        /// Client should provide a unique request id to perform at most once execution
+        /// </summary>
+        public string RequestId;
+    }
+
+    [Preserve]
+    public class QueryUserEntitlementsOptionalParameters : OptionalParametersBase
+    {
+        /// <summary>
+        /// Query based on entitlement name
+        /// </summary>
+        public string EntitlementName = null;
+
+        /// <summary>
+        /// Query based on Item's id
+        /// </summary>
+        public string ItemId = null;
+
+        /// <summary>
+        /// Offset of the list that has been sliced based on Limit parameter
+        /// </summary>
+        public int Offset = 0;
+
+        /// <summary>
+        /// The limit of item on page
+        /// </summary>
+        public int Limit = 20;
+
+        /// <summary>
+        /// Class of the entitlement
+        /// </summary>
+        public EntitlementClazz EntitlementClazz = EntitlementClazz.NONE;
+
+        /// <summary>
+        /// This is the type of application that entitled
+        /// </summary>
+        public EntitlementAppType EntitlementAppType = EntitlementAppType.NONE;
+        
+        /// <summary>
+        /// Query based on the features
+        /// </summary>
+        public string[] Features = null;
     }
 }

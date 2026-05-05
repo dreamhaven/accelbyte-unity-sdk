@@ -1,58 +1,46 @@
-﻿// Copyright (c) 2020 - 2024 AccelByte Inc. All Rights Reserved.
+﻿// Copyright (c) 2020 - 2025 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
-using System.Collections;
-using AccelByte.Models;
-using System.Net;
 using System;
+using AccelByte.Models;
 
 namespace AccelByte.Core
 {
+    /// <summary>
+    /// Static utility class for network operations (backward compatibility facade)
+    /// For new code, use INetUtilities from AccelByteSdk.GetClientRegistry().NetUtilities
+    /// </summary>
     public static class AccelByteNetUtilities
     {
-        private static readonly CoroutineRunner coroutineRunner = new CoroutineRunner();
-        private static readonly IHttpClient httpClient;
+        private static Lazy<INetUtilities> instance = new Lazy<INetUtilities>(CreateInstance);
 
-        static AccelByteNetUtilities()
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetInstance()
+        {
+            instance = new Lazy<INetUtilities>(CreateInstance);
+        }
+
+        private static INetUtilities CreateInstance()
         {
             IHttpRequestSender httpSender = AccelByteSDK.Implementation.SdkHttpSenderFactory.CreateHttpRequestSender();
-            httpClient = new AccelByteHttpClient(httpSender);
+            IHttpClient httpClient = new AccelByteHttpClient(httpSender);
+            return new AccelByteNetUtilitiesService(httpClient);
         }
+
+        private static INetUtilities Instance => instance.Value;
 
         [Obsolete("ipify supports will be deprecated in future releases)")]
         public static void GetPublicIp(ResultCallback<PublicIp> callback)
         {
-            coroutineRunner.Run(GetPublicIpAsync(callback));
+            Instance.GetPublicIp(callback);
         }
 
         internal static void GetPublicIpWithIpify(HttpOperator httpOperator, ResultCallback<PublicIp> callback)
         {
-            var getPubIpRequest = HttpRequestBuilder.CreateGet("https://api.ipify.org?format=json")
-                .WithContentType(MediaType.ApplicationJson)
-                .Accepts(MediaType.ApplicationJson)
-                .GetResult();
-
-            httpOperator.SendRequest(getPubIpRequest, response =>
-            {
-                var result = response.TryParseJson<PublicIp>();
-                callback?.Try(result);
-            });
-        }
-
-        private static IEnumerator GetPublicIpAsync(ResultCallback<PublicIp> callback)
-        {
-            var getPubIpRequest = HttpRequestBuilder.CreateGet("https://api.ipify.org?format=json")
-                .WithContentType(MediaType.ApplicationJson)
-                .Accepts(MediaType.ApplicationJson)
-                .GetResult();
-
-            IHttpResponse response = null;
-
-            yield return AccelByteSDK.GetClientRegistry().GetApi().httpClient.SendRequest(getPubIpRequest, rsp => response = rsp);
-
-            var result = response.TryParseJson<PublicIp>();
-            callback.Try(result);
+            // For backward compatibility with DedicatedServerManagerApi
+            var service = new AccelByteNetUtilitiesService(httpOperator);
+            service.GetPublicIp(callback);
         }
 
         /// <summary>
@@ -63,18 +51,12 @@ namespace AccelByte.Core
         /// <param name="callback">Returns a Result via callback when completed.</param>
         public static void UploadTo(string url, byte[] data, ResultCallback callback, string contentType = "application/octet-stream")
         {
-            if (string.IsNullOrEmpty(url))
-            {
-                callback.TryError(new Error(ErrorCode.InvalidArgument, "Failed to upload, url cannot be null!"));
-                return;
-            }
-            if (data == null)
-            {
-                callback.TryError(new Error(ErrorCode.InvalidArgument, "Failed to upload, data cannot be null!"));
-                return;
-            }
+            Instance.UploadTo(url, data, callback, contentType);
+        }
 
-            coroutineRunner.Run(UploadToAsync(url, data, false, contentType, callback));
+        internal static void UploadTo(string url, byte[] data, UploadToOptionalParameters optionalParameters, ResultCallback callback)
+        {
+            Instance.UploadTo(url, data, optionalParameters, callback);
         }
 
         /// <summary>
@@ -83,13 +65,11 @@ namespace AccelByte.Core
         /// <param name="url">URL to upload.</param>
         /// <param name="data">Data to upload.</param>
         /// <param name="callback">Returns a Result via callback when completed.</param>
-        public static void UploadBinaryTo(string url
-            , byte[] data
-            , ResultCallback callback)
+        public static void UploadBinaryTo(string url, byte[] data, ResultCallback callback)
         {
-            UploadBinaryTo(url, data, null, callback);
+            Instance.UploadBinaryTo(url, data, callback);
         }
-        
+
         /// <summary>
         /// Upload binary data to given URL.
         /// </summary>
@@ -97,57 +77,9 @@ namespace AccelByte.Core
         /// <param name="data">Data to upload.</param>
         /// <param name="optionalParameters">Optional parameters to upload binary data.</param>
         /// <param name="callback">Returns a Result via callback when completed.</param>
-        public static void UploadBinaryTo(string url
-            , byte[] data
-            , UploadBinaryOptionalParameters optionalParameters
-            , ResultCallback callback)
+        public static void UploadBinaryTo(string url, byte[] data, UploadBinaryOptionalParameters optionalParameters, ResultCallback callback)
         {
-            if (string.IsNullOrEmpty(url))
-            {
-                callback.TryError(new Error(ErrorCode.InvalidArgument, "Failed to upload, url cannot be null!"));
-                return;
-            }
-            if (data == null)
-            {
-                callback.TryError(new Error(ErrorCode.InvalidArgument, "Failed to upload, data cannot be null!"));
-                return;
-            }
-
-            string contentType = "application/octet-stream";
-            if (optionalParameters != null && !string.IsNullOrEmpty(optionalParameters.ContentType))
-            {
-                contentType = optionalParameters.ContentType;
-            }
-            coroutineRunner.Run(UploadToAsync(url, data, isBinary: true, contentType: contentType, callback: callback));
-        }
-
-        private static IEnumerator UploadToAsync(string url
-            , byte[] data
-            , bool isBinary
-            , string contentType
-            , ResultCallback callback)
-        {
-            var requestBuilder = HttpRequestBuilder.CreatePut(url)
-                .WithContentType(contentType)
-                .Accepts(MediaType.ApplicationJson);
-
-            if (!isBinary)
-            {
-                requestBuilder.WithBody(System.Convert.ToBase64String(data));
-            }
-            else
-            {
-                requestBuilder.WithBody(data);
-            }
-
-            var request = requestBuilder.GetResult();
-
-            IHttpResponse response = null;
-
-            yield return httpClient.SendRequest(request, rsp => response = rsp);
-
-            var result = response.TryParse();
-            callback.Try(result);
+            Instance.UploadBinaryTo(url, data, optionalParameters, callback);
         }
 
         /// <summary>
@@ -157,7 +89,12 @@ namespace AccelByte.Core
         /// <param name="callback">Returns a Result that contains byte[] data via callback when completed.</param>
         public static void DownloadFrom(string url, ResultCallback<byte[]> callback)
         {
-            coroutineRunner.Run(DownloadFromAsync(url, false, callback));
+            Instance.DownloadFrom(url, callback);
+        }
+
+        internal static void DownloadFrom(string url, DownloadFromOptionalParameters optionalParameters, ResultCallback<byte[]> callback)
+        {
+            Instance.DownloadFrom(url, optionalParameters, callback);
         }
 
         /// <summary>
@@ -167,48 +104,12 @@ namespace AccelByte.Core
         /// <param name="callback">Returns a Result that contains byte[] data via callback when completed.</param>
         public static void DownloadBinaryFrom(string url, ResultCallback<byte[]> callback)
         {
-            coroutineRunner.Run(DownloadFromAsync(url, true, callback));
+            Instance.DownloadBinaryFrom(url, callback);
         }
 
-        private static IEnumerator DownloadFromAsync(string url, bool isBinary, ResultCallback<byte[]> callback)
+        internal static void DownloadBinaryFrom(string url, DownloadBinaryFromOptionalParameters optionalParameters, ResultCallback<byte[]> callback)
         {
-            var uploadRequest = HttpRequestBuilder.CreateGet(url)
-                .WithContentType(MediaType.ApplicationOctetStream)
-                .Accepts(MediaType.ApplicationJson)
-                .GetResult();
-
-            IHttpResponse response = null;
-
-            yield return httpClient.SendRequest(uploadRequest, rsp => response = rsp);
-
-            Result<byte[]> result;
-
-            if (response == null)
-            {
-                result = Result<byte[]>.CreateError(ErrorCode.InvalidResponse);
-                callback.Try(result);
-                yield break;
-            }
-
-            switch ((HttpStatusCode)response.Code)
-            {
-                case HttpStatusCode.OK:
-                    var value = response.BodyBytes;
-                    if (!isBinary && value != null)
-                    {
-                        value = Convert.FromBase64String(System.Text.Encoding.UTF8.GetString(value));
-                    }
-                    result = Result<byte[]>.CreateOk(value);
-
-                    break;
-
-                default:
-                    result = Result<byte[]>.CreateError((ErrorCode)response.Code);
-
-                    break;
-            }
-
-            callback.Try(result);
+            Instance.DownloadBinaryFrom(url, optionalParameters, callback);
         }
     }
 }

@@ -38,7 +38,17 @@ namespace AccelByte.Core
 
         public override void SendEvent(IAccelByteTelemetryEvent telemetryEvent, ResultCallback callback)
         {
+            SendEvent(telemetryEvent, optionalParameters: null, callback);
+        }
+
+        internal void SendEvent(IAccelByteTelemetryEvent telemetryEvent, OptionalParametersBase optionalParameters, ResultCallback callback)
+        {
             TelemetryBody eventBody = new TelemetryBody(telemetryEvent);
+            if (optionalParameters != null)
+            {
+                eventBody.SetOptionalParameters(optionalParameters);
+            }
+            
             if (SharedMemory != null && SharedMemory.TimeManager != null)
             {
                 AccelByteGameTelemetryApi.TryAssignTelemetryBodyClientTimestamps(ref eventBody, ref SharedMemory.TimeManager);

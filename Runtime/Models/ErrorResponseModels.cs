@@ -1,7 +1,8 @@
-﻿// Copyright (c) 2018 - 2024 AccelByte Inc. All Rights Reserved.
+﻿// Copyright (c) 2018 - 2025 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
+using AccelByte.Core;
 using System.Runtime.Serialization;
 using UnityEngine.Scripting;
 
@@ -37,6 +38,31 @@ namespace AccelByte.Models
         [DataMember] public string comment;
         [DataMember] public string endDate;
         [DataMember] public BanReason reason;
+
+        public System.DateTime EndDateTime
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(endDate))
+                {
+                    return new System.DateTime();
+                }
+
+                try
+                {
+                    long ticks = long.Parse(endDate);
+                    System.DateTimeOffset dateTimeOffset = System.DateTimeOffset.FromUnixTimeSeconds(ticks);
+                    System.DateTime dateTime = dateTimeOffset.UtcDateTime;
+                    
+                    return dateTime;
+                }
+                catch (System.Exception ex)
+                {
+                    AccelByte.Core.AccelByteDebug.LogWarning($"Unable to parse ban endDate\n{ex.Message}");
+                    return new System.DateTime();
+                }
+            }
+        }
     }
 
     [DataContract, Preserve]
@@ -75,5 +101,29 @@ namespace AccelByte.Models
         [DataMember(Name = "platformId")] public string PlatformId;
         [DataMember(Name = "remainingBackupCodeCount")] public double RemainingBackupCodeCount;
         [DataMember] public UserBan userBan;
+    }
+    
+    public class ResultErrorOptionalParameters
+    {
+        /// <summary>
+        /// Error code of an error
+        /// </summary>
+        public string Message = null;
+
+        /// <summary>
+        /// A free form additional message that possibly attached after getting an error
+        /// eg: additional string that explain what cause the error
+        /// </summary>
+        public object MessageVariables = null;
+
+        /// <summary>
+        /// A nested or child error
+        /// </summary>
+        public Error InnerError = null;
+
+        /// <summary>
+        /// An Http response received from the service
+        /// </summary>
+        public IHttpResponse HttpResponse;
     }
 }

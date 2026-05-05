@@ -1,4 +1,4 @@
-// Copyright (c) 2024 AccelByte Inc. All Rights Reserved.
+// Copyright (c) 2024 - 2025 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
@@ -49,19 +49,44 @@ namespace AccelByte.Core
         internal readonly Utils.AccelByteServiceTracker ServiceTracker;
         
         internal System.Action<IHttpClient> OnHttpClientCreated;
+        internal Utils.SingularCallEvent<AccelByteClientRegistry> OnClientRegistryCreated;
+        internal Utils.SingularCallEvent<Server.AccelByteServerRegistry> OnServerRegistryCreated;
+
+        private Utils.AccelByteServiceLogger serviceLogger;
 
         public AccelByteSDKImplementator()
         {
             Environment = new AccelByteEnvironment();
             Environment.OnEnvironmentChanged += ChangeInterfaceEnvironment;
-            
+
             ServiceTracker = new Utils.AccelByteServiceTracker();
-            var serviceLogger = new Utils.AccelByteServiceLogger();
-            
+            serviceLogger = new Utils.AccelByteServiceLogger();
+
             ServiceTracker.OnNewRequestSentEvent += serviceLogger.LogServiceActivity;
             ServiceTracker.OnNewResponseReceivedEvent += serviceLogger.LogServiceActivity;
             ServiceTracker.OnSendingWebsocketRequestEvent += serviceLogger.LogServiceActivity;
             ServiceTracker.OnReceivingWebsocketNotificationEvent += serviceLogger.LogServiceActivity;
+        }
+
+        ~AccelByteSDKImplementator()
+        {
+            Cleanup();
+        }
+
+        private void Cleanup()
+        {
+            if (Environment != null)
+            {
+                Environment.OnEnvironmentChanged -= ChangeInterfaceEnvironment;
+            }
+
+            if (ServiceTracker != null && serviceLogger != null)
+            {
+                ServiceTracker.OnNewRequestSentEvent -= serviceLogger.LogServiceActivity;
+                ServiceTracker.OnNewResponseReceivedEvent -= serviceLogger.LogServiceActivity;
+                ServiceTracker.OnSendingWebsocketRequestEvent -= serviceLogger.LogServiceActivity;
+                ServiceTracker.OnReceivingWebsocketNotificationEvent -= serviceLogger.LogServiceActivity;
+            }
         }
 
         public AccelByteClientRegistry GetClientRegistry()
@@ -69,6 +94,7 @@ namespace AccelByte.Core
             if (ClientRegistry == null)
             {
                 ClientRegistry = CreateClientRegistry(Environment.Current);
+                OnClientRegistryCreated.Invoke(ClientRegistry);
             }
             return ClientRegistry;
         }
@@ -78,6 +104,7 @@ namespace AccelByte.Core
             if (ServerRegistry == null)
             {
                 ServerRegistry = CreateServerRegistry(Environment.Current);
+                OnServerRegistryCreated.Invoke(ServerRegistry);
             }
             return ServerRegistry;
         }
@@ -145,7 +172,15 @@ namespace AccelByte.Core
             const bool getServerConfig = true;
             AccelByteSettingsV2 settings = AccelByteSettingsV2.GetSettingsByEnv(environment, OverrideConfigs, getServerConfig);
             IHttpRequestSenderFactory httpRequestSenderFactory = SdkHttpSenderFactory;
-            var newServerRegistry = new Server.AccelByteServerRegistry(environment, settings.ServerSdkConfig, settings.OAuthConfig, httpRequestSenderFactory, TimeManager, CoreHeartBeat, ServiceTracker);
+            var newServerRegistry = new Server.AccelByteServerRegistry(
+                environment
+                , settings.ServerSdkConfig
+                , settings.OAuthConfig
+                , httpRequestSenderFactory
+                , TimeManager
+                , CoreHeartBeat
+                , FileStream
+                , ServiceTracker);
             
             return newServerRegistry;
         }

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019 - 2024 AccelByte Inc. All Rights Reserved.
+﻿// Copyright (c) 2019 - 2025 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
@@ -38,13 +38,32 @@ namespace AccelByte.Api
             , EntitlementAppType entitlementAppType
             , ResultCallback<EntitlementPagingSlicedResult> callback)
         {
+            var optionalParam = new QueryUserEntitlementsOptionalParameters()
+            {
+                EntitlementName = entitlementName,
+                ItemId = itemId,
+                Features = features,
+                Offset = offset,
+                Limit = limit,
+                EntitlementClazz = entitlementClazz,
+                EntitlementAppType = entitlementAppType
+            };
+
+            QueryUserEntitlements(userId, optionalParam, callback);
+            yield break;
+        }
+
+        internal void QueryUserEntitlements(string userId
+            , QueryUserEntitlementsOptionalParameters optionalParameters
+            , ResultCallback<EntitlementPagingSlicedResult> callback)
+        {
             Report.GetFunctionLog(GetType().Name);
 
             var error = ApiHelperUtils.CheckForNullOrEmpty(Namespace_, AuthToken, userId);
             if (error != null)
             {
-                callback.TryError(error);
-                yield break;
+                callback?.TryError(error);
+                return;
             }
 
             var httpBuilder = HttpRequestBuilder
@@ -55,59 +74,55 @@ namespace AccelByte.Api
                 .WithContentType(MediaType.ApplicationJson)
                 .Accepts(MediaType.ApplicationJson);
 
-            if (offset >= 0)
+            if (optionalParameters == null)
             {
-                httpBuilder.WithQueryParam("offset", offset.ToString());
-            }
-            else
-            {
-                httpBuilder.WithQueryParam("offset", "0");
+                optionalParameters = new QueryUserEntitlementsOptionalParameters();
             }
 
-            if (limit >= 0)
+            if (optionalParameters.Offset >= 0)
             {
-                httpBuilder.WithQueryParam("limit", limit.ToString());
-            }
-            else
-            {
-                httpBuilder.WithQueryParam("limit", "20");
+                httpBuilder.WithQueryParam("offset", optionalParameters.Offset.ToString());
             }
 
-            if (features != null && features.Length > 0)
+            if (optionalParameters.Limit >= 0)
             {
-                httpBuilder.WithQueryParam("features", features);
+                httpBuilder.WithQueryParam("limit", optionalParameters.Limit.ToString());
             }
 
-            if (entitlementClazz != EntitlementClazz.NONE)
+            if (optionalParameters.Features != null && optionalParameters.Features.Length > 0)
             {
-                httpBuilder.WithQueryParam("entitlementClazz", entitlementClazz.ToString());
+                httpBuilder.WithQueryParam("features", optionalParameters.Features);
             }
 
-            if (entitlementAppType != EntitlementAppType.NONE)
+            if (optionalParameters.EntitlementClazz != EntitlementClazz.NONE)
             {
-                httpBuilder.WithQueryParam("entitlementAppType", entitlementAppType.ToString());
+                httpBuilder.WithQueryParam("entitlementClazz", optionalParameters.EntitlementClazz.ToString());
             }
 
-            if (!string.IsNullOrEmpty(entitlementName))
+            if (optionalParameters.EntitlementAppType != EntitlementAppType.NONE)
             {
-                httpBuilder.WithQueryParam("entitlementName", entitlementName);
+                httpBuilder.WithQueryParam("entitlementAppType", optionalParameters.EntitlementAppType.ToString());
             }
 
-            if (!string.IsNullOrEmpty(itemId))
+            if (!string.IsNullOrEmpty(optionalParameters.EntitlementName))
             {
-                httpBuilder.WithQueryParam("itemId", itemId);
+                httpBuilder.WithQueryParam("entitlementName", optionalParameters.EntitlementName);
+            }
+
+            if (!string.IsNullOrEmpty(optionalParameters.ItemId))
+            {
+                httpBuilder.WithQueryParam("itemId", optionalParameters.ItemId);
             }
 
             IHttpRequest request = httpBuilder.GetResult();
-            IHttpResponse response = null;
 
-            yield return HttpClient.SendRequest(request, result =>
+            var additionalParameters = AdditionalHttpParameters.CreateFromOptionalParameters(optionalParameters);
+
+            HttpOperator.SendRequest(additionalParameters, request, result =>
             {
-                response = result;
+                var response = result.TryParseJson<EntitlementPagingSlicedResult>();
+                callback?.Try(response);
             });
-
-            var result = response.TryParseJson<EntitlementPagingSlicedResult>();
-            callback.Try(result);
         }
 
         internal void QueryUserSubscription(string userId, PlatformStoreId platformStoreId, ResultCallback<SubscriptionPagingSlicedResult> callback, QueryUserSubscriptionRequestOptionalParameters optionalParameters)
@@ -156,8 +171,12 @@ namespace AccelByte.Api
             }
             
             IHttpRequest request = builder.GetResult();
-            
-            HttpOperator.SendRequest(request, response =>
+            var additionalParams = new AdditionalHttpParameters()
+            {
+                Logger = optionalParameters?.Logger
+            };
+
+            HttpOperator.SendRequest(additionalParams, request, response =>
             {
                 var result = response.TryParseJson<SubscriptionPagingSlicedResult>();
                 callback?.Try(result);
@@ -190,7 +209,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParseJson<EntitlementInfo>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         /// <summary>
@@ -226,7 +245,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParseJson<Ownership>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         /// <summary>
@@ -262,7 +281,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParseJson<Ownership>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public IEnumerator GetUserEntitlementOwnershipByItemId( string userId
@@ -290,7 +309,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParseJson<Ownership>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         /// <summary>
@@ -337,7 +356,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParseJson<Ownership>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public IEnumerator GetUserEntitlementOwnershipToken( string publisherNamespace
@@ -373,14 +392,14 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParseJson<OwnershipToken>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public void GetUserEntitlementHistory(string userId
             , GetUserEntitlementHistoryOptionalParams optionalParams
             , ResultCallback<UserEntitlementHistoryResponse> callback)
         {
-            Report.GetFunctionLog(GetType().Name);
+            Report.GetFunctionLog(GetType().Name, logger: optionalParams?.Logger);
 
             var error = ApiHelperUtils.CheckForNullOrEmpty(Namespace_, AuthToken, userId);
             if (error != null)
@@ -424,7 +443,12 @@ namespace AccelByte.Api
 
             var request = httpBuilder.GetResult();
 
-            HttpOperator.SendRequest(request, response =>
+            var additionalParams = new AdditionalHttpParameters()
+            {
+                Logger = optionalParams?.Logger
+            };
+
+            HttpOperator.SendRequest(additionalParams, request, response =>
             {
                 var result = response.TryParseJson<UserEntitlementHistoryResponse>();
                 callback?.Try(result);
@@ -468,7 +492,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParseJson<EntitlementInfo>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         [Obsolete("Platform Service version 3.4.0 and above doesn't support this anymore, This feature already removed.)")]
@@ -503,7 +527,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParse();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         [Obsolete("Platform Service version 3.4.0 and above doesn't support this anymore, This feature already removed.)")]
@@ -530,7 +554,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParse();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         /// <summary>
@@ -564,7 +588,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParseJson<DistributionReceiver[]>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         [Obsolete("Platform Service version 3.4.0 and above doesn't support this anymore, This feature already removed.)")]
@@ -599,7 +623,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParse();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
 
@@ -639,7 +663,7 @@ namespace AccelByte.Api
             , PlatformSyncMobileGoogleOptionalParameters optionalParameters
             , ResultCallback<GoogleReceiptResolveResult> callback)
         {
-            Report.GetFunctionLog(GetType().Name);
+            Report.GetFunctionLog(GetType().Name, logger: optionalParameters?.Logger);
 
             var error = ApiHelperUtils.CheckForNullOrEmpty(orderId
                 , packageName
@@ -673,7 +697,12 @@ namespace AccelByte.Api
                 .Accepts(MediaType.ApplicationJson)
                 .GetResult();
 
-            HttpOperator.SendRequest(request, response =>
+            var additionalParams = new AdditionalHttpParameters()
+            {
+                Logger = optionalParameters?.Logger
+            };
+
+            HttpOperator.SendRequest(additionalParams, request, response =>
             {
                 var result = response.TryParseJson<GoogleReceiptResolveResult>();
                 callback?.Try(result);
@@ -707,7 +736,12 @@ namespace AccelByte.Api
                 .WithBody(syncRequest.ToUtf8Json())
                 .GetResult();
 
-            HttpOperator.SendRequest(request, response =>
+            var additionalParams = new AdditionalHttpParameters()
+            {
+                Logger = optionalParam?.Logger
+            };
+
+            HttpOperator.SendRequest(additionalParams, request, response =>
             {
                 var result = response.TryParse();
                 callback?.Try(result);
@@ -775,7 +809,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParse();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public IEnumerator SyncSteamDLC( string userId
@@ -806,7 +840,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParse();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         internal void SyncSteamInventory(string userSteamId
@@ -846,7 +880,12 @@ namespace AccelByte.Api
                 .Accepts(MediaType.ApplicationJson)
                 .GetResult();
 
-            HttpOperator.SendRequest(request, response =>
+            var additionalParams = new AdditionalHttpParameters()
+            {
+                Logger = optionalParameters?.Logger
+            };
+
+            HttpOperator.SendRequest(additionalParams, request, response =>
             {
                 var result = response.TryParse();
                 callback?.Try(result);
@@ -876,7 +915,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParse();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public IEnumerator SyncTwitchDropItem( string userId
@@ -902,7 +941,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParse();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public IEnumerator SyncEpicGamesDurableItems(string userId
@@ -928,7 +967,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParse();
-            callback.Try(result);
+            callback?.Try(result);
         }
         
         public IEnumerator SyncPSNDLCMultipleService(string userId 
@@ -937,19 +976,19 @@ namespace AccelByte.Api
         {
             if (string.IsNullOrEmpty(Namespace_))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(Namespace_) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(Namespace_) + " cannot be null or empty"));
                 yield break;
             }
 
             if (string.IsNullOrEmpty(AuthToken))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(AuthToken) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(AuthToken) + " cannot be null or empty"));
                 yield break;
             }
 
             if (string.IsNullOrEmpty(userId))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(userId) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(userId) + " cannot be null or empty"));
                 yield break;
             }
 
@@ -970,7 +1009,7 @@ namespace AccelByte.Api
             });
 
             var result = response.TryParse();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public IEnumerator ValidateUserItemPurchaseCondition(ValidateUserItemPurchaseConditionRequest requestModel
@@ -979,7 +1018,7 @@ namespace AccelByte.Api
             var error = ApiHelperUtils.CheckForNullOrEmpty(Namespace_, AuthToken, requestModel, requestModel?.ItemIds);
             if (error != null)
             {
-                callback.TryError(error);
+                callback?.TryError(error);
                 yield break;
             }
 
@@ -997,7 +1036,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParseJson<PlatformValidateUserItemPurchaseResponse[]>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public IEnumerator GetUserEntitlementOwnershipByItemIds(string userId
@@ -1007,7 +1046,7 @@ namespace AccelByte.Api
             var error = ApiHelperUtils.CheckForNullOrEmpty(Namespace_, AuthToken, ids);
             if (error != null)
             {
-                callback.TryError(error);
+                callback?.TryError(error);
                 yield break;
             }
 
@@ -1031,7 +1070,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParseJson<EntitlementOwnershipItemIds[]>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public IEnumerator SyncEntitlementPSNStore(string userId
@@ -1056,7 +1095,7 @@ namespace AccelByte.Api
                 rsp => response = rsp);
 
             var result = response.TryParse();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public IEnumerator SyncXboxInventory(string userId
@@ -1083,7 +1122,7 @@ namespace AccelByte.Api
             });
 
             var result = response.TryParseJson<XboxInventoryResponse[]>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public IEnumerator SyncEntitlementPSNMultipleService(string userId
@@ -1092,19 +1131,19 @@ namespace AccelByte.Api
         {
             if (string.IsNullOrEmpty(Namespace_))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(Namespace_) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(Namespace_) + " cannot be null or empty"));
                 yield break;
             }
 
             if (string.IsNullOrEmpty(AuthToken))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(AuthToken) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(AuthToken) + " cannot be null or empty"));
                 yield break;
             }
 
             if (string.IsNullOrEmpty(userId))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(userId) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(userId) + " cannot be null or empty"));
                 yield break;
             }
 
@@ -1125,54 +1164,61 @@ namespace AccelByte.Api
             });
 
             var result = response.TryParseJson<PlayStationMultipleServiceResponse[]>();
-            callback.Try(result);
+            callback?.Try(result);
         }
         
         public IEnumerator SellUserEntitlement(UserEntitlementSoldParams userEntitlementSoldParams
             , EntitlementSoldRequest entitlementSoldRequest
             , ResultCallback<SellItemEntitlementInfo> callback)
         {
+            SellUserEntitlement(userEntitlementSoldParams.UserId, userEntitlementSoldParams.EntitlementId, entitlementSoldRequest, null, callback);
+            yield break;
+        }
+
+        internal void SellUserEntitlement(string userId
+            , string entitlementId
+            , EntitlementSoldRequest entitlementSoldRequest
+            , SellUserEntitlementOptionalParameters optionalParameters
+            , ResultCallback<SellItemEntitlementInfo> callback)
+        {
             Report.GetFunctionLog(GetType().Name);
             var error = ApiHelperUtils.CheckForNullOrEmpty(
                 Namespace_
                 , AuthToken
-                , userEntitlementSoldParams
-                , userEntitlementSoldParams?.UserId
-                , userEntitlementSoldParams?.EntitlementId
+                , userId
+                , entitlementId
                 , entitlementSoldRequest
             );
             if (error != null)
             {
-                callback.TryError(error);
-                yield break;
+                callback?.TryError(error);
+                return;
             }
 
-            EntitlementSoldRequest entitlementSoldRequestBody = new EntitlementSoldRequest
+            if (optionalParameters != null
+                && !string.IsNullOrEmpty(optionalParameters.RequestId))
             {
-                UseCount = entitlementSoldRequest.UseCount,
-                RequestId = string.IsNullOrEmpty(entitlementSoldRequest.RequestId) ? null : entitlementSoldRequest.RequestId
-            };
-            
+                entitlementSoldRequest.RequestId = optionalParameters.RequestId;
+            }
+
             var request = HttpRequestBuilder
                 .CreatePut(BaseUrl + "/public/namespaces/{namespace}/users/{userId}/entitlements/{entitlementId}/sell")
                 .WithPathParam("namespace", Namespace_)
-                .WithPathParam("userId", userEntitlementSoldParams.UserId)
-                .WithPathParam("entitlementId", userEntitlementSoldParams.EntitlementId)
+                .WithPathParam("userId", userId)
+                .WithPathParam("entitlementId", entitlementId)
                 .WithBearerAuth(AuthToken)
                 .WithContentType(MediaType.ApplicationJson)
-                .WithBody(entitlementSoldRequestBody.ToUtf8Json())
+                .WithBody(entitlementSoldRequest.ToUtf8Json())
                 .Accepts(MediaType.ApplicationJson)
                 .GetResult();
 
-            IHttpResponse response = null;
+            var additionalParameters = AdditionalHttpParameters.CreateFromOptionalParameters(optionalParameters);
 
-            yield return HttpClient.SendRequest(request, rsp =>
+            HttpOperator.SendRequest(additionalParameters, request, rsp =>
             {
-                response = rsp;
+                var result = rsp.TryParseJson<SellItemEntitlementInfo>();
+                callback?.Try(result);
             });
-
-            var result = response.TryParseJson<SellItemEntitlementInfo>();
-            callback.Try(result);
         }
 
         public IEnumerator SyncOculusConsumableEntitlements(string userId
@@ -1180,19 +1226,19 @@ namespace AccelByte.Api
         {
             if (string.IsNullOrEmpty(Namespace_))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(Namespace_) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(Namespace_) + " cannot be null or empty"));
                 yield break;
             }
 
             if (string.IsNullOrEmpty(AuthToken))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(AuthToken) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(AuthToken) + " cannot be null or empty"));
                 yield break;
             }
 
             if (string.IsNullOrEmpty(userId))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(userId) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(userId) + " cannot be null or empty"));
                 yield break;
             }
 
@@ -1212,7 +1258,7 @@ namespace AccelByte.Api
             });
 
             var result = response.TryParseJson<SyncOculusConsumableEntitlementResponse[]>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public IEnumerator SyncOculusDLC(string userId
@@ -1220,19 +1266,19 @@ namespace AccelByte.Api
         {
             if (string.IsNullOrEmpty(Namespace_))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(Namespace_) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(Namespace_) + " cannot be null or empty"));
                 yield break;
             }
 
             if (string.IsNullOrEmpty(AuthToken))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(AuthToken) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(AuthToken) + " cannot be null or empty"));
                 yield break;
             }
 
             if (string.IsNullOrEmpty(userId))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(userId) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(userId) + " cannot be null or empty"));
                 yield break;
             }
 
@@ -1252,7 +1298,7 @@ namespace AccelByte.Api
             });
 
             var result = response.TryParse();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public IEnumerator SyncEpicGameInventory(string userId
@@ -1261,25 +1307,25 @@ namespace AccelByte.Api
         {
             if (string.IsNullOrEmpty(Namespace_))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(Namespace_) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(Namespace_) + " cannot be null or empty"));
                 yield break;
             }
 
             if (string.IsNullOrEmpty(AuthToken))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(AuthToken) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(AuthToken) + " cannot be null or empty"));
                 yield break;
             }
 
             if (string.IsNullOrEmpty(userId))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(userId) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(userId) + " cannot be null or empty"));
                 yield break;
             }
 
             if (string.IsNullOrEmpty(epicGamesJwtToken))
             {
-                callback.TryError(new Error(ErrorCode.BadRequest, nameof(epicGamesJwtToken) + " cannot be null or empty"));
+                callback?.TryError(new Error(ErrorCode.BadRequest, nameof(epicGamesJwtToken) + " cannot be null or empty"));
                 yield break;
             }
 
@@ -1301,7 +1347,7 @@ namespace AccelByte.Api
             });
 
             var result = response.TryParseJson<SyncEpicGamesInventoryResponse[]>();
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         public void GetDlcDurableRewardSimpleMap(string platformType, ResultCallback<DlcConfigRewardShortInfo> callback)

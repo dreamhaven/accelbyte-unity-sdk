@@ -91,15 +91,25 @@ namespace AccelByte.Server
         /// </summary>
         public virtual void Connect(string dsId)
         {
-            Report.GetFunctionLog(GetType().Name);
+            Connect(dsId, new WebsocketConnectOptionalParameters()
+            {
+                Logger = sharedMemory?.Logger
+            });
+        }
+        
+        internal void Connect(string dsId, WebsocketConnectOptionalParameters optionalParameters)
+        {
+            var targetLogger = optionalParameters != null && optionalParameters.Logger != null ? optionalParameters.Logger : sharedMemory?.Logger;
+            
+            Report.GetFunctionLog(GetType().Name, logger: targetLogger);
 
             if (dsId == null || dsId.Length == 0)
             {
-                sharedMemory?.Logger?.LogWarning("dsid not provided, not connecting to AMS");
+                targetLogger?.LogWarning("dsid not provided, not connecting to AMS");
             }
             else
             {
-                websocketApi.Connect(dsId);
+                websocketApi.Connect(dsId, optionalParameters);
             }
         }
 
@@ -134,6 +144,15 @@ namespace AccelByte.Server
         {
             sharedMemory?.Logger?.LogVerbose("Send ready to AMS");
             SendReadyMessageImplementation();
+        }
+        
+        /// <summary>
+        /// Send claim message to AMS.
+        /// </summary>
+        public void SendClaimMessage(string sessionId)
+        {
+            sharedMemory?.Logger?.LogVerbose("Send claim to AMS");
+            SendClaimMessageImplementation(sessionId);
         }
 
         /// <summary>
@@ -179,6 +198,11 @@ namespace AccelByte.Server
             StartHeartBeatScheduler();
         }
 
+        protected virtual void SendClaimMessageImplementation(string sessionId)
+        {
+            websocketApi.SendClaimMessage(sessionId);
+        }
+        
         #region protected/private methods
         protected void HandleOnOpen()
         {

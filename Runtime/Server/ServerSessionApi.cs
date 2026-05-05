@@ -92,6 +92,14 @@ namespace AccelByte.Server
         public IEnumerator GetGameSessionDetails(string sessionId
             , ResultCallback<SessionV2GameSession> callback)
         {
+            GetGameSessionDetails(sessionId, null, callback);
+            yield break;
+        }
+
+        internal void GetGameSessionDetails(string sessionId
+            , OptionalParametersBase optionalParameters
+            , ResultCallback<SessionV2GameSession> callback)
+        {
             var error = ApiHelperUtils.CheckForNullOrEmpty(sessionId
                 , AuthToken
                 , Namespace_);
@@ -99,7 +107,7 @@ namespace AccelByte.Server
             if (error != null)
             {
                 callback?.TryError(error);
-                yield break;
+                return;
             }
 
             var request = HttpRequestBuilder
@@ -110,18 +118,14 @@ namespace AccelByte.Server
                 .WithContentType(MediaType.ApplicationJson)
                 .Accepts(MediaType.ApplicationJson)
                 .GetResult();
+            
+            var additionalHttpParameters = AdditionalHttpParameters.CreateFromOptionalParameters(optionalParameters);
 
-            IHttpResponse response = null;
-
-            yield return HttpClient.SendRequest(request,
-                rsp =>
-                {
-                    response = rsp;
-                });
-
-            var result = response.TryParseJson<SessionV2GameSession>();
-
-            callback?.Try(result);
+            HttpOperator.SendRequest(additionalHttpParameters, request, response =>
+            {
+                var result = response.TryParseJson<SessionV2GameSession>();
+                callback?.Try(result);
+            });
         }
 
         public IEnumerator DeleteGameSession(string sessionId
@@ -357,6 +361,48 @@ namespace AccelByte.Server
             HttpOperator.SendRequest(request, response =>
             {
                 var result = response.TryParseJson<GetPartySessionStorageResult>();
+                callback?.Try(result);
+            });
+        }
+
+        internal void GetRecentPlayers(string userId, GetRecentPlayersOptionalParameters optionalParameters, ResultCallback<SessionV2RecentPlayers> callback)
+        {
+            var error = ApiHelperUtils.CheckForNullOrEmpty(userId, AuthToken, Namespace_);
+            if (error != null)
+            {
+                callback?.TryError(error);
+                return;
+            }
+
+            uint limit = 20; // Default value
+            if (optionalParameters?.Limit != null)
+            {
+                limit = optionalParameters.Limit.Value;
+                if (limit > 200)
+                {
+                    AccelByteDebug.LogWarning($"Requesting recent player limit with {limit} will only return 200 items");
+                    limit = 200;
+                }
+            }
+
+            var requestBuilder = HttpRequestBuilder
+                .CreateGet(BaseUrl + "/v1/admin/namespaces/{namespace}/recent-player")
+                .WithPathParam("namespace", Namespace_)
+                .WithQueryParam("userId", userId)
+                .WithBearerAuth(AuthToken)
+                .WithContentType(MediaType.ApplicationJson)
+                .Accepts(MediaType.ApplicationJson);
+
+            if (optionalParameters?.Limit != null)
+            {
+                requestBuilder.WithQueryParam("limit", limit.ToString());
+            }
+
+            var request = requestBuilder.GetResult();
+
+            HttpOperator.SendRequest(request, response =>
+            {
+                var result = response.TryParseJson<SessionV2RecentPlayers>();
                 callback?.Try(result);
             });
         }

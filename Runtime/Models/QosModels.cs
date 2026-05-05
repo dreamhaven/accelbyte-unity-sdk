@@ -15,7 +15,7 @@ namespace AccelByte.Models
     public enum QosStatus
     {
         [Description("UNREACHABLE"), EnumMember(Value = "UNREACHABLE")] Unreachable,
-        [Description("INACTIVE"), EnumMember(Value = "ACTIVE")] Inactive,
+        [Description("INACTIVE"), EnumMember(Value = "INACTIVE")] Inactive,
         [Description("ACTIVE"), EnumMember(Value = "ACTIVE")] Active
     }
 
@@ -27,7 +27,7 @@ namespace AccelByte.Models
         /// <summary>
         /// Build latencies map for matchmaking feature
         /// </summary>
-        internal AccelByteResult<System.Collections.Generic.Dictionary<string, int>, Error> GenerateLatenciesMap(bool useCache = true)
+        internal AccelByteResult<System.Collections.Generic.Dictionary<string, int>, Error> GenerateLatenciesMap(IDebugger debugger, bool useCache = true)
         {
             var retval = new AccelByteResult<System.Collections.Generic.Dictionary<string, int>, Error>();
             if (servers == null || servers.Length == 0) 
@@ -39,7 +39,7 @@ namespace AccelByte.Models
             System.Action<int, QosServer[], System.Collections.Generic.Dictionary<string, int>, AccelByteResult<System.Collections.Generic.Dictionary<string, int>, Error>> buildLatencyMap = null;
             buildLatencyMap = (index, turnServers, latenciesMap, resultTask) =>
             {
-                turnServers[index].GetLatency(useCache)
+                turnServers[index].GetLatency(debugger, useCache)
                     .OnSuccess(latency => 
                     {
                         if (!latenciesMap.ContainsKey(turnServers[index].region))
@@ -92,9 +92,16 @@ namespace AccelByte.Models
         /// <summary>
         /// Get latency of server
         /// </summary>
-        internal AccelByteResult<int, Error> GetLatency(bool useCache = true)
+        internal AccelByteResult<int, Error> GetLatency(IDebugger debugger, bool useCache = true)
         {
             AccelByteResult<int, Error> retval = new AccelByteResult<int, Error>();
+            
+            if(string.IsNullOrEmpty(status) || status.ToLower() != QosStatus.Active.ToString().ToLower())
+            {
+                retval.Reject(new Error(ErrorCode.InvalidRequest, message: "Server status isn't active"));
+                return retval;
+            }
+            
             if (LatencyCalculator == null)
             {
                 LatencyCalculator = LatencyCalculatorFactory.CreateDefaultCalculator();
@@ -112,7 +119,7 @@ namespace AccelByte.Models
 #if UNITY_WEBGL && !UNITY_EDITOR
             url = AccelByte.Utils.Networking.GetTestServerUrlByRegion(region);
 #endif
-            retval = calculator.CalculateLatency(url, port);
+            retval = calculator.CalculateLatency(url, port, debugger);
             retval.OnSuccess(newLatency =>
             {
                 cachedLatency = newLatency;
@@ -123,10 +130,10 @@ namespace AccelByte.Models
         /// <summary>
         /// Build latencies map for matchmaking feature
         /// </summary>
-        internal AccelByteResult<System.Collections.Generic.Dictionary<string, int>, Error> GenerateLatencyMap(bool useCache = true)
+        internal AccelByteResult<System.Collections.Generic.Dictionary<string, int>, Error> GenerateLatencyMap(IDebugger debugger, bool useCache = true)
         {
             var retval = new AccelByteResult<System.Collections.Generic.Dictionary<string, int>, Error>();
-            GetLatency(useCache)
+            GetLatency(debugger, useCache)
                 .OnSuccess(latency =>
                 {
                     var latencyMap = new System.Collections.Generic.Dictionary<string, int>();
@@ -143,7 +150,13 @@ namespace AccelByte.Models
     }
 
     [Preserve]
-    public class GetQosServerOptionalParameters
+    internal class GetAllActiveServerLatenciesOptionalParameters : OptionalParametersBase
+    {
+        
+    }
+    
+    [Preserve]
+    public class GetQosServerOptionalParameters : OptionalParametersBase
     {
         internal QosStatus? Status;
         internal ILatencyCalculator LatencyCalculator;
@@ -153,18 +166,20 @@ namespace AccelByte.Models
             FetchQosServerOptionalParameters retval = new FetchQosServerOptionalParameters();
             retval.Status = Status;
             retval.LatencyCalculator = LatencyCalculator;
+            retval.Logger = Logger;
+            retval.ApiTracker = ApiTracker;
             return retval;
         }
     }
     
     [Preserve]
-    internal class GetAllServerOptionalParameters
+    internal class GetAllServerOptionalParameters : OptionalParametersBase
     {
         internal ILatencyCalculator LatencyCalculator;
     }
     
     [Preserve]
-    public class FetchQosServerOptionalParameters
+    public class FetchQosServerOptionalParameters : OptionalParametersBase
     {
         public QosStatus? Status;
         internal ILatencyCalculator LatencyCalculator;

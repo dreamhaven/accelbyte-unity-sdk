@@ -71,6 +71,15 @@ namespace AccelByte.Models
         OnDSStatusChanged,
     }
 
+    [JsonConverter(typeof(StringEnumConverter)), System.Serializable]
+    public enum InviteUserToPartyPlatformIdType
+    {
+        None,
+        Steam,
+        PSN,
+        Xbox,
+    }
+
     [DataContract, Preserve]
     public class SessionV2PublicConfiguration
     {
@@ -90,6 +99,8 @@ namespace AccelByte.Models
     [DataContract, Preserve]
     public class SessionV2SessionInviteRequest
     {
+        [DataMember(Name = "metadata")] public Dictionary<string, string> Metadata;
+        [DataMember(Name = "platformID")] public string PlatformId;
         [DataMember] public string userId;
     }
 
@@ -220,6 +231,9 @@ namespace AccelByte.Models
     {
         [DataMember] public string partyId;
         [DataMember] public string senderId;
+        [DataMember] public string code;
+        [DataMember] public DateTime expiredAt;
+        [DataMember] public Dictionary<string, string> metadata;
     }
     
     [DataContract, Preserve]
@@ -377,12 +391,83 @@ namespace AccelByte.Models
     }
 
     [DataContract, Preserve]
+    public class SessionV2JoinedSecret
+    {
+        [DataMember] public string secret;
+    }
+
+
+    [Preserve]
+    public class GameSessionQuery
+    {
+        internal System.Collections.Generic.Dictionary<string, object> Request;
+        
+        public GameSessionQuery()
+        {
+            Request = new System.Collections.Generic.Dictionary<string, object>();
+        }
+        
+        public GameSessionQuery(System.Collections.Generic.Dictionary<string, object> request)
+        {
+            if (request != null)
+            {
+                Request = new System.Collections.Generic.Dictionary<string, object>(request);
+            }
+            else
+            {
+                Request = new System.Collections.Generic.Dictionary<string, object>();
+            }
+        }
+
+        public bool AddParam(string key, object value)
+        {
+            if (Request.ContainsKey(key))
+            {
+                return false;
+            }
+            
+            Request.Add(key, value);
+            return true;
+        }
+    }
+    
+    [Preserve]
+    public class QueryGameSessionOptionalParameters : OptionalParametersBase
+    {
+        /// <summary>
+        /// Set "offset" on query request
+        /// </summary>
+        public uint? Offset;
+        /// <summary>
+        /// Set "limit" on query request
+        /// </summary>
+        public uint? Limit;
+        /// <summary>
+        /// Set "availability" on query request
+        /// </summary>
+        public QueryGameSessionAvailability? Availability;
+    }
+
+    [Preserve]
+    public enum QueryGameSessionAvailability
+    {
+        All,
+        Full
+    }
+
+    [DataContract, Preserve]
+    public class JoinGameSessionOptionalParameters : OptionalParametersBase
+    {
+        
+    }
+
+    [DataContract, Preserve]
     public class AcceptBackfillProposalResponse : SessionV2GameSession
     {
     }
     
     [DataContract, Preserve]
-    public class AcceptBackfillProposalOptionalParams
+    public class AcceptBackfillProposalOptionalParams : OptionalParametersBase
     {
         [DataMember(Name = "acceptedTicketIds")] public string[] AcceptedTicketIds;
         [DataMember(Name = "stop")] public bool? StopBackfilling;
@@ -517,6 +602,58 @@ namespace AccelByte.Models
     {
         [DataMember(Name = "platformUserID")] public string PlatformUserID;
     }
+
+    [Preserve]
+    public class InviteUserToPartyPlatformId
+    {
+        internal readonly string Id;
+
+        public InviteUserToPartyPlatformId(InviteUserToPartyPlatformIdType typeEnum)
+        {
+            Id = typeEnum.ToString().ToUpper();
+        }
+
+        public InviteUserToPartyPlatformId(string platformId)
+        {
+            if (!Enum.TryParse(platformId, out InviteUserToPartyPlatformIdType _))
+            {
+                Id = string.Empty;
+            }
+            else
+            {
+                Id = platformId.ToUpper();
+            }
+        }
+    }
+
+    [DataContract, Preserve]
+    public class InviteUserToPartyOptionalParameters : OptionalParametersBase
+    {
+        /// <summary>
+        /// Additional parameter which will be sent over via invitation notification and is not permanently stored in the game session storage.
+        /// </summary>
+        public Dictionary<string, string> Metadata;
+
+        /// <summary>
+        /// PlatformID represents the native platform of the invitee.
+        /// Supported platforms:, STEAM, XBOX, PSN
+        /// </summary>
+        public InviteUserToPartyPlatformId PlatformId;
+    }
+
+    public class InviteUserToGameSessionOptionalParameters : OptionalParametersBase
+    {
+        /// <summary>
+        /// Additional parameter which will be sent over via invitation notification and is not permanently stored in the game session storage.
+        /// </summary>
+        public Dictionary<string, string> Metadata;
+
+        /// <summary>
+        /// PlatformID represents the native platform of the invitee.
+        /// Supported platforms:, STEAM, XBOX, PSN
+        /// </summary>
+        public string PlatformId;
+    }
     
     [DataContract, Preserve]
     public class InviteUserToGameSessionResponse
@@ -530,6 +667,9 @@ namespace AccelByte.Models
     public class SessionV2GameInvitationNotification
     {
         [DataMember] public string sessionId;
+        [DataMember] public string senderId;
+        [DataMember] public DateTime expiredAt;
+        [DataMember] public Dictionary<string, string> metadata;
     }    
     
     [DataContract, Preserve]
@@ -543,6 +683,11 @@ namespace AccelByte.Models
     public class SessionV2GameUserKickedNotification
     {
         [DataMember] public string partyId;
+    }
+    
+    [DataContract, Preserve]
+    public class RejectSessionInvitationOptionalParameters : OptionalParametersBase
+    {
     }
     
     [DataContract, Preserve]
@@ -681,6 +826,31 @@ namespace AccelByte.Models
         [System.ComponentModel.Description("STEAM")] Steam,
         [System.ComponentModel.Description("XBOX")] Xbox,
         [System.ComponentModel.Description("PSN")] Psn
+    }
+
+    [Preserve, DataContract]
+    public class SessionV2RecentPlayer
+    {
+        [DataMember(Name = "namespace")] public string Namespace;
+        [DataMember(Name = "platformName")] public string PlatformName;
+        [DataMember(Name = "userID")] public string UserId;
+        [DataMember(Name = "lastPlayedTime")] public DateTime LastPlayedTime;
+        [DataMember(Name = "matchPool")] public string MatchPool;
+        [DataMember(Name = "sessionTemplate")] public string SessionTemplate;
+    }
+
+    [Preserve, DataContract]
+    public class SessionV2RecentPlayers
+    {
+        [DataMember(Name = "data")] public SessionV2RecentPlayer[] Data;
+    }
+
+    public class GetRecentPlayersOptionalParameters : OptionalParametersBase
+    {
+        /// <summary>
+        /// Maximum number of recent players to retrieve (default: 20, max: 200)
+        /// </summary>
+        public uint? Limit;
     }
 
     #endregion

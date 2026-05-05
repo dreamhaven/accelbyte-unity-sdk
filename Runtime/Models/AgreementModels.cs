@@ -216,4 +216,54 @@ namespace AccelByte.Models
         [DataMember(Name = "id")] public string Id;
         [DataMember(Name = "policyTypeName")] public string PolicyTypeName;
     }
+
+    [Preserve]
+    public class GetLegalPoliciesOptionalParameters : OptionalParametersBase
+    { 
+
+    }
+
+    [Preserve]
+    public class GetLegalPoliciesByCountryOptionalParameters : OptionalParametersBase
+    {
+
+    }
+
+    [Preserve]
+    public class BulkAcceptPolicyVersionsOptionalParameters : OptionalParametersBase
+    {
+
+    }
+
+    [Preserve]
+    public class AcceptPolicyVersionOptionalParameters : OptionalParametersBase
+    {
+
+    }
+
+    [Preserve]
+    public class QueryLegalEligibilitiesOptionalParameters : OptionalParametersBase
+    {
+
+    }
+
+    [Preserve]
+    public class ChangePolicyPreferencesOptionalParameters : OptionalParametersBase
+    {
+
+    }
+
+    [Preserve]
+    public class GetPoliciesByNamespaceAndCountryOptionalParameters : OptionalParametersBase
+    {
+        /// <summary>
+        /// If empty by default will use Namespace in the config.
+        /// </summary>
+        public string Namespace;
+        public AgreementPolicyType? PolicyType;
+        public string[] Tags;
+        public bool? DefaultOnEmpty;
+        public bool? AlwaysIncludeDefault;
+        public bool? VisibleOnly;
+    }
 }

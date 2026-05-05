@@ -111,6 +111,13 @@ namespace AccelByte.Server
         public void GetGameSessionDetails(string sessionId
             , ResultCallback<SessionV2GameSession> callback)
         {
+            GetGameSessionDetails(sessionId, null, callback);
+        }
+        
+        internal void GetGameSessionDetails(string sessionId
+            , OptionalParametersBase optionalParameters
+            , ResultCallback<SessionV2GameSession> callback)
+        {
             Report.GetFunctionLog(GetType().Name, logger: SharedMemory?.Logger);
 
             if (!ValidateAccelByteId(sessionId, Utils.AccelByteIdValidator.HypensRule.NoRule, Utils.AccelByteIdValidator.GetSessionIdInvalidMessage(sessionId), callback))
@@ -124,10 +131,10 @@ namespace AccelByte.Server
                 return;
             }
 
-            _coroutineRunner.Run(
-                Api.GetGameSessionDetails(
-                    sessionId,
-                    callback));
+            Api.GetGameSessionDetails(
+                sessionId,
+                optionalParameters,
+                callback);
         }
 
         /// <summary>
@@ -323,6 +330,42 @@ namespace AccelByte.Server
             }
 
             Api.GetPartySessionStorage(partyId, callback);
+        }
+
+        /// <summary>
+        /// Get recent players for a specific user
+        /// </summary>
+        /// <param name="userId">The user ID to query recent players for</param>
+        /// <param name="callback">Returns SessionV2RecentPlayers via callback when completed</param>
+        public void GetRecentPlayers(string userId, ResultCallback<SessionV2RecentPlayers> callback)
+        {
+            GetRecentPlayers(userId, null, callback);
+        }
+
+        /// <summary>
+        /// Get recent players for a specific user
+        /// </summary>
+        /// <param name="userId">The user ID to query recent players for</param>
+        /// <param name="optionalParameters">Optional parameters including limit (default: 20, max: 200)</param>
+        /// <param name="callback">Returns SessionV2RecentPlayers via callback when completed</param>
+        public void GetRecentPlayers(string userId, GetRecentPlayersOptionalParameters optionalParameters, ResultCallback<SessionV2RecentPlayers> callback)
+        {
+            Report.GetFunctionLog(GetType().Name, logger: SharedMemory?.Logger);
+
+            if (!ValidateAccelByteId(userId, Utils.AccelByteIdValidator.HypensRule.NoHypens
+                , Utils.AccelByteIdValidator.GetUserIdInvalidMessage(userId)
+                , callback))
+            {
+                return;
+            }
+
+            if (!_session.IsValid())
+            {
+                callback?.TryError(ErrorCode.IsNotLoggedIn);
+                return;
+            }
+
+            Api.GetRecentPlayers(userId, optionalParameters, callback);
         }
     }
 }

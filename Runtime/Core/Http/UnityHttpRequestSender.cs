@@ -1,7 +1,8 @@
-﻿// Copyright (c) 2021 - 2024 AccelByte Inc. All Rights Reserved.
+﻿// Copyright (c) 2021 - 2025 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
+using AccelByte.Models;
 using System;
 using System.Collections.Generic;
 using UnityEngine.Networking;
@@ -16,7 +17,14 @@ namespace AccelByte.Core
         private CoreHeartBeat heartBeat;
 
         private static HashSet<string> clearedCookiesUrl;
-        
+
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetClearedCookies()
+        {
+            clearedCookiesUrl?.Clear();
+            clearedCookiesUrl = null;
+        }
+
         public UnityHttpRequestSender(WebRequestScheduler httpTaskScheduler)
         {
             this.httpTaskScheduler = httpTaskScheduler;
@@ -38,9 +46,9 @@ namespace AccelByte.Core
             httpTaskScheduler?.SetHeartBeat(coreHeartBeat);
         }
 
-        public void AddTask(IHttpRequest request, Action<HttpSendResult> callback, int timeoutMs, uint delayTimeMs = 0)
+        public void AddTask(IHttpRequest request, Action<HttpSendResult> callback, int timeoutMs, uint delayTimeMs, AdditionalHttpParameters additionalHttpParameters)
         {
-            WebRequestTask newTask = new WebRequestTask(request, timeoutMs, delayTimeMs)
+            WebRequestTask newTask = new WebRequestTask(request, timeoutMs, delayTimeMs, additionalHttpParameters)
             {
                 OnComplete = (sentWebRequest) =>
                 {
@@ -53,6 +61,14 @@ namespace AccelByte.Core
                 {
                     httpTaskScheduler.ExecuteWebTask(newTask);
                 }));
+        }
+
+        public void AddTask(IHttpRequest request, Action<HttpSendResult> callback, int timeoutMs, uint delayTimeMs = 0)
+        {
+            AddTask(request, callback, timeoutMs, delayTimeMs, new AdditionalHttpParameters()
+            {
+                Logger = this.logger
+            });
         }
 
         public void ClearTasks()

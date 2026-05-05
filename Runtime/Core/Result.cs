@@ -1,6 +1,9 @@
-﻿// Copyright (c) 2018 - 2024 AccelByte Inc. All Rights Reserved.
+﻿// Copyright (c) 2018 - 2025 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
+
+using AccelByte.Models;
+using Newtonsoft.Json;
 
 namespace AccelByte.Core
 {
@@ -462,20 +465,76 @@ namespace AccelByte.Core
 
     public class Error
     {
-        public readonly ErrorCode Code;
-        public readonly string Message;
-        public readonly object messageVariables;
-        public readonly Error InnerError;
+        /// <summary>
+        /// Error code of an error
+        /// </summary>
+        public ErrorCode Code { private set; get; }
 
-        public Error(ErrorCode code, string message = null, object messageVariables = null, Error innerError = null)
+        /// <summary>
+        /// Attached error message after an error is occured
+        /// </summary>
+        public string Message { private set; get; }
+
+        /// <summary>
+        /// A free form additional message that possibly attached after getting an error
+        /// eg: additional string that explain what cause the error
+        /// </summary>
+        public object messageVariables { private set; get; }
+
+        /// <summary>
+        /// A nested or child error
+        /// </summary>
+        public Error InnerError { private set; get; }
+
+        /// <summary>
+        /// An http Response detail on what endpoint that causes an error
+        /// </summary>
+        public IHttpResponse HttpResponse { private set; get; }
+
+        /// <summary>
+        /// Default constructor for JSON deserialization
+        /// </summary>
+        [JsonConstructor]
+        public Error(
+            [JsonProperty("code")] ErrorCode code = ErrorCode.UnknownError,
+            [JsonProperty("message")] string message = null,
+            [JsonProperty("messageVariables")] object messageVariables = null,
+            [JsonProperty("innerError")] Error innerError = null)
+        {
+            InitValue(code
+                , message
+                , innerError
+                , messageVariables
+                , null);
+        }
+
+        public Error(ErrorCode code, ResultErrorOptionalParameters optionalParameters)
+        {
+            InitValue(code
+                , optionalParameters?.Message
+                , optionalParameters?.InnerError
+                , optionalParameters?.MessageVariables
+                , optionalParameters?.HttpResponse);
+        }
+
+        private void InitValue(ErrorCode code, string message, Error innerError, object messageVariables, IHttpResponse httpResponse)
         {
             this.Code = code;
             this.Message = string.IsNullOrEmpty(message) ? GetDefaultErrorMessage() : message;
             this.InnerError = innerError;
             this.messageVariables = messageVariables;
+            this.HttpResponse = httpResponse;
         }
 
-        public Error WrapWith(ErrorCode code, string message = null, object messageVariables = null) { return new Error(code, message, messageVariables, this); }
+        public Error WrapWith(ErrorCode code, string message = null, object messageVariables = null)
+        {
+            ResultErrorOptionalParameters optionalParameters = new ResultErrorOptionalParameters();
+            optionalParameters.Message = message;
+            optionalParameters.MessageVariables = messageVariables;
+            optionalParameters.InnerError = this;
+
+            return new Error(code, optionalParameters);
+        }
 
         private string GetDefaultErrorMessage()
         {
@@ -637,7 +696,16 @@ namespace AccelByte.Core
 
         public static Result<T> CreateError(ErrorCode errorCode, string errorMessage = null, object messageVariables = null)
         {
-            return new Result<T>(new Error(errorCode, errorMessage, messageVariables), default);
+            ResultErrorOptionalParameters optionalParameters = new ResultErrorOptionalParameters();
+            optionalParameters.Message = errorMessage;
+            optionalParameters.MessageVariables = messageVariables;
+
+            return CreateError(errorCode, optionalParameters);
+        }
+
+        public static Result<T> CreateError(ErrorCode errorCode, ResultErrorOptionalParameters optionalParameters)
+        {
+            return new Result<T>(new Error(errorCode, optionalParameters), default);
         }
 
         public static Result<T> CreateError(Error error)
@@ -676,7 +744,16 @@ namespace AccelByte.Core
 
         public static Result CreateError(ErrorCode errorCode, string errorMessage = null, object messageVariables = null)
         {
-            return new Result(new Error(errorCode, errorMessage, messageVariables));
+            ResultErrorOptionalParameters optionalParameters = new ResultErrorOptionalParameters();
+            optionalParameters.Message = errorMessage;
+            optionalParameters.MessageVariables = messageVariables;
+
+            return new Result(new Error(errorCode, optionalParameters));
+        }
+
+        public static Result CreateError(ErrorCode errorCode, ResultErrorOptionalParameters optionalParameters)
+        {
+            return new Result(new Error(errorCode, optionalParameters));
         }
 
         public static Result CreateError(Error error) { return new Result(error); }

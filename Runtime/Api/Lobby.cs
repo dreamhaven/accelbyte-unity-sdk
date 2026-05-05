@@ -150,6 +150,11 @@ namespace AccelByte.Api
         public event ResultCallback<SessionStorageChangedNotification> SessionV2StorageChanged;
 
         /// <summary>
+        /// SessionV2 - Raised when received Joined change
+        /// </summary>
+        public event ResultCallback<SessionV2JoinedSecret> SessionV2JoinedSecret;
+
+        /// <summary>
         /// MatchmakingV2 - Raised when match is found
         /// </summary>
         public event ResultCallback<MatchmakingV2MatchFoundNotification> MatchmakingV2MatchFound;
@@ -202,7 +207,7 @@ namespace AccelByte.Api
         /// <summary>
         /// Raised when there is an incoming friend request
         /// </summary>
-        public event ResultCallback<Friend> OnIncomingFriendRequest;
+        public event ResultCallback<RequestFriend> OnIncomingFriendRequest;
 
         /// <summary>
         /// Raised when friend remove user from friendlist
@@ -382,12 +387,20 @@ namespace AccelByte.Api
         /// </summary>
         public void Connect()
         {
+            Connect(new WebsocketConnectOptionalParameters()
+            {
+                Logger = SharedMemory?.Logger
+            });
+        }
+
+        internal void Connect(WebsocketConnectOptionalParameters optionalParameters)
+        {
             Report.GetFunctionLog(GetType().Name);
 
             connectRetryTicker.OnHeartbeatTrigger = null;
             ClearRetryConnectDelegate();
 
-            websocketApi.Connect();
+            websocketApi.Connect(optionalParameters);
 
             retryAttempts = 0;
             connectRetryTicker.OnHeartbeatTrigger += RetryConnect;
@@ -445,12 +458,12 @@ namespace AccelByte.Api
             {
                 if (result.IsError)
                 {
-                    callback.TryError(result.Error);
+                    callback?.TryError(result.Error);
                     return;
                 }
 
                 UserRegion = region;
-                callback.TryOk();
+                callback?.TryOk();
             });
         }
 
@@ -515,7 +528,7 @@ namespace AccelByte.Api
 
         /// <summary>
         /// Create a party and become a party leader for the party.
-        /// PartyCode is also provided to the party creator through the callback.
+        /// PartyCode is also provided to the party creator through the callback?.
         /// </summary>
         /// <param name="callback">
         /// Returns a Result that contain PartyCreateResponse via callback when completed.
@@ -570,7 +583,7 @@ namespace AccelByte.Api
         }
 
         /// <summary>
-        /// Invite other user by userId with detailed model in response callback.
+        /// Invite other user by userId with detailed model in response callback?.
         /// Only party leader (creator) can invite other user.
         /// </summary>
         /// <param name="userId">User Id of a person to be invited to </param>
@@ -634,7 +647,7 @@ namespace AccelByte.Api
         }
 
         /// <summary>
-        /// Kick a member out of our party with detailed model in response callback.
+        /// Kick a member out of our party with detailed model in response callback?.
         /// Only a party leader can kick a party member.
         /// </summary>
         /// <param name="userId">User Id of the user to be kicked out of party</param>
@@ -896,7 +909,7 @@ namespace AccelByte.Api
 
             if (!session.IsValid())
             {
-                callback.TryError(ErrorCode.IsNotLoggedIn);
+                callback?.TryError(ErrorCode.IsNotLoggedIn);
                 return;
             }
 
@@ -1080,7 +1093,7 @@ namespace AccelByte.Api
 
             if (!session.IsValid())
             {
-                callback.TryError(ErrorCode.IsNotLoggedIn);
+                callback?.TryError(ErrorCode.IsNotLoggedIn);
                 return;
             }
 
@@ -1105,7 +1118,7 @@ namespace AccelByte.Api
 
             if (!session.IsValid())
             {
-                callback.TryError(ErrorCode.IsNotLoggedIn);
+                callback?.TryError(ErrorCode.IsNotLoggedIn);
                 return;
             }
 
@@ -1426,7 +1439,7 @@ namespace AccelByte.Api
             , MatchmakingOptionalParam param
             , ResultCallback<MatchmakingCode> callback)
         {
-            Report.GetFunctionLog(GetType().Name);
+            Report.GetFunctionLog(GetType().Name, logger: param?.Logger);
             websocketApi.StartMatchmaking(gameMode, param, cb =>
             {
                 if (!cb.IsError && cb.Value != null)
@@ -1545,7 +1558,7 @@ namespace AccelByte.Api
 
             if (!session.IsValid())
             {
-                callback.TryError(ErrorCode.IsNotLoggedIn);
+                callback?.TryError(ErrorCode.IsNotLoggedIn);
                 return;
             }
 
@@ -1581,11 +1594,26 @@ namespace AccelByte.Api
 
             if (!session.IsValid())
             {
-                callback.TryError(ErrorCode.IsNotLoggedIn);
+                callback?.TryError(ErrorCode.IsNotLoggedIn);
                 return;
             }
 
             WritePartyStorageRecursive(retryAttempt, partyId, callback, payloadModifier);
+        }
+
+        internal void WritePartyStorage(PartyDataUpdateRequest updateRequest
+            , string partyId
+            , Action callbackOnConflictedData
+            , ResultCallback<PartyDataUpdateNotif> callback)
+        {
+            coroutineRunner.Run(
+                api.WritePartyStorage(
+                    updateRequest,
+                    partyId,
+                    callback,
+                    callbackOnConflictedData
+                )
+            );
         }
 
         private void WritePartyStorageRecursive(int remainingAttempt
@@ -1595,7 +1623,7 @@ namespace AccelByte.Api
         {
             if (remainingAttempt <= 0)
             {
-                callback.TryError(new Error(ErrorCode.PreconditionFailed,
+                callback?.TryError(new Error(ErrorCode.PreconditionFailed,
                     "Exhaust all retry attempt to modify party storage. Please try again."));
                 return;
             }
@@ -1604,30 +1632,33 @@ namespace AccelByte.Api
             {
                 if (getPartyStorageResult.IsError)
                 {
-                    callback.TryError(getPartyStorageResult.Error);
+                    callback?.TryError(getPartyStorageResult.Error);
                 }
                 else
                 {
-                    getPartyStorageResult.Value.custom_attribute = payloadModifier(
-                        getPartyStorageResult.Value.custom_attribute);
+                    if (getPartyStorageResult.Value != null)
+                    {
+                        getPartyStorageResult.Value.custom_attribute = payloadModifier(
+                            getPartyStorageResult.Value.custom_attribute);
 
-                    var updateRequest = new PartyDataUpdateRequest();
-                    updateRequest.custom_attribute = getPartyStorageResult.Value.custom_attribute;
-                    updateRequest.updatedAt = getPartyStorageResult.Value.updatedAt;
-
-                    coroutineRunner.Run(
-                        api.WritePartyStorage(
-                            updateRequest,
-                            partyId,
-                            callback,
-                            () =>
-                            {
-                                WritePartyStorageRecursive(
-                                    remainingAttempt - 1,
-                                    partyId,
-                                    callback,
-                                    payloadModifier);
-                            }));
+                        var updateRequest = new PartyDataUpdateRequest();
+                        updateRequest.custom_attribute = getPartyStorageResult.Value.custom_attribute;
+                        updateRequest.updatedAt = getPartyStorageResult.Value.updatedAt;
+                        Action callbackOnConflictedData = () =>
+                        {
+                            WritePartyStorageRecursive(
+                                remainingAttempt - 1,
+                                partyId,
+                                callback,
+                                payloadModifier);
+                        };
+ 
+                        WritePartyStorage(updateRequest, partyId, callbackOnConflictedData, callback);
+                    }
+                    else
+                    {
+                        callback?.TryError(new Error(ErrorCode.UnknownError, "Party storage result is null"));
+                    }
                 }
             });
         }
@@ -1706,7 +1737,7 @@ namespace AccelByte.Api
 
             if (!session.IsValid())
             {
-                callback.TryError(ErrorCode.IsNotLoggedIn);
+                callback?.TryError(ErrorCode.IsNotLoggedIn);
                 return;
             }
 
@@ -1727,7 +1758,7 @@ namespace AccelByte.Api
 
             if (!session.IsValid())
             {
-                callback.TryError(ErrorCode.IsNotLoggedIn);
+                callback?.TryError(ErrorCode.IsNotLoggedIn);
                 return;
             }
 
@@ -2073,7 +2104,6 @@ namespace AccelByte.Api
                 return;
             }
 
-            // var notificationEventEnvelope = Accelbyte.Proto.Session.NotificationEventEnvelope.Parser.ParseFrom(payloadString);
             var jsonString = Encoding.UTF8.GetString(payloadBytes);
 
             switch (notificationType)
@@ -2152,6 +2182,12 @@ namespace AccelByte.Api
                         JsonConvert.DeserializeObject<SessionV2GameMembersChangedNotification>(jsonString);
                     websocketApi.DispatchNotification(gameSessionNotificationMembersChanged,
                         SessionV2GameSessionMemberChanged);
+                    break;
+                case MultiplayerV2NotifType.OnSessionJoinedSecret:
+                    var sessionJoinedSecretNotif =
+                        JsonConvert.DeserializeObject<SessionV2JoinedSecret>(jsonString);
+                    websocketApi.DispatchNotification(sessionJoinedSecretNotif,
+                        SessionV2JoinedSecret);
                     break;
                 case MultiplayerV2NotifType.OnGameSessionUpdated:
                     var gameSession =
@@ -2378,6 +2414,7 @@ namespace AccelByte.Api
             messagingSystem?.UnsubscribeToTopic(AccelByteMessagingTopic.QosRegionLatenciesUpdated, OnReceivedQosLatenciesUpdatedHandle);
             messagingSystem?.UnsubscribeToTopic(AccelByteMessagingTopic.MatchmakingStarted, OnMatchmakingStartedHandle);
             messagingSystem?.UnsubscribeToTopic(AccelByteMessagingTopic.NotificationSenderLobby, OnNotificationSenderMessageReceivedHandle);
+            messagingSystem?.UnsubscribeToTopic(AccelByteMessagingTopic.RejectGameSessionNotification, OnSessionRejectedReceivedHandle);
             
             base.SetSharedMemory(newSharedMemory);
 
@@ -2385,6 +2422,7 @@ namespace AccelByte.Api
             messagingSystem?.SubscribeToTopic(AccelByteMessagingTopic.QosRegionLatenciesUpdated, OnReceivedQosLatenciesUpdatedHandle);
             messagingSystem?.SubscribeToTopic(AccelByteMessagingTopic.MatchmakingStarted, OnMatchmakingStartedHandle);
             messagingSystem?.SubscribeToTopic(AccelByteMessagingTopic.NotificationSenderLobby, OnNotificationSenderMessageReceivedHandle);
+            messagingSystem?.SubscribeToTopic(AccelByteMessagingTopic.RejectGameSessionNotification, OnSessionRejectedReceivedHandle);
             notificationBuffer?.SetLogger(SharedMemory?.Logger);
             
             websocketApi?.SetLogger(SharedMemory?.Logger);
@@ -2448,6 +2486,15 @@ namespace AccelByte.Api
             }
 
             HandleOnMessage(payload, true);
+        }
+
+        private void OnSessionRejectedReceivedHandle(string sessionId)
+        {
+            string sessionCacheId = $"sessionInvited_{sessionId}";
+            if (processedMatchmakingMessages != null && processedMatchmakingMessages.Contains(sessionCacheId))
+            {
+                processedMatchmakingMessages.Remove(sessionCacheId);
+            }
         }
 
         #region PredefinedEvents
@@ -2703,11 +2750,11 @@ namespace AccelByte.Api
         {
             if (result.IsError)
             {
-                callback.TryError(result.Error);
+                callback?.TryError(result.Error);
                 return;
             }
 
-            callback.Try(result);
+            callback?.Try(result);
         }
 
         private void HandleCallback<T>(Result<T> result, ResultCallback<T> callback)
@@ -2715,11 +2762,11 @@ namespace AccelByte.Api
             {
                 if (result.IsError)
                 {
-                    callback.TryError(result.Error);
+                    callback?.TryError(result.Error);
                     return;
                 }
 
-                callback.Try(result);
+                callback?.Try(result);
             }
         }
 

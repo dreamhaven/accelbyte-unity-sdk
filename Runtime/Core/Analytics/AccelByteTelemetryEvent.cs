@@ -2,6 +2,7 @@
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
+using AccelByte.Models;
 using System;
 
 namespace AccelByte.Core
@@ -33,10 +34,19 @@ namespace AccelByte.Core
             }
         }
 
+        internal OptionalParametersBase TelemetryOptionalParameters;
+
         public AccelByteTelemetryEvent(Models.IAccelByteTelemetryPayload payload)
         {
             Payload = payload;
             CreatedTimestamp = DateTime.Now;
+        }
+
+        internal AccelByteTelemetryEvent(Models.IAccelByteTelemetryPayload payload, OptionalParametersBase telemetryOptionalParameters)
+        {
+            Payload = payload;
+            CreatedTimestamp = DateTime.Now;
+            TelemetryOptionalParameters = telemetryOptionalParameters;
         }
     }
 }

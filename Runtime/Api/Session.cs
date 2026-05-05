@@ -127,14 +127,22 @@ namespace AccelByte.Api
         public void InviteUserToParty(string partyId, string userId,
             ResultCallback callback)
         {
-            Report.GetFunctionLog(GetType().Name, logger: SharedMemory?.Logger);
+            InviteUserToParty(partyId, userId, null, callback);
+        }
+
+        public void InviteUserToParty(string partyId
+            , string userId
+            , InviteUserToPartyOptionalParameters optionalParameters
+            , ResultCallback callback)
+        {
+            Report.GetFunctionLog(GetType().Name, logger: optionalParameters?.Logger);
 
             if (!ValidateAccelByteId(partyId, Utils.AccelByteIdValidator.HypensRule.NoRule, Utils.AccelByteIdValidator.GetPartyIdInvalidMessage(partyId), callback))
             {
                 return;
             }
 
-            if(string.IsNullOrEmpty(userId))
+            if (string.IsNullOrEmpty(userId))
             {
                 callback?.TryError(new Error(ErrorCode.InvalidRequest, "User id cannot be null or empty"));
                 return;
@@ -158,9 +166,10 @@ namespace AccelByte.Api
             sessionApi.InviteUserToParty(
                 partyId,
                 userId,
+                optionalParameters,
                 inviteUserCallback);
-        }        
-        
+        }
+
         public void PromoteUserToPartyLeader(string partyId, string leaderId,
             ResultCallback<SessionV2PartySession> callback)
         {
@@ -472,22 +481,36 @@ namespace AccelByte.Api
         public void QueryGameSession(Dictionary<string, object> request
             , ResultCallback<PaginatedResponse<SessionV2GameSession>> callback)
         {
+            QueryGameSession(new GameSessionQuery(request), null, callback);
+        }
+        
+        public void QueryGameSession(GameSessionQuery query
+            , ResultCallback<PaginatedResponse<SessionV2GameSession>> callback)
+        {
+            QueryGameSession(query, null, callback);
+        }
+
+        public void QueryGameSession(GameSessionQuery query
+            , QueryGameSessionOptionalParameters optionalParameters
+            , ResultCallback<PaginatedResponse<SessionV2GameSession>> callback)
+        {
             Report.GetFunctionLog(GetType().Name, logger: SharedMemory?.Logger);
-            if (request == null)
-            {
-                request = new Dictionary<string, object>();
-            }
 
             if (!session.IsValid())
             {
                 callback?.TryError(ErrorCode.IsNotLoggedIn);
                 return;
             }
+            
+            if (query == null)
+            {
+                query = new GameSessionQuery();
+            }
 
-            coroutineRunner.Run(
-                sessionApi.QueryGameSession(
-                    request,
-                    callback));
+            sessionApi.QueryGameSession(
+                query.Request,
+                optionalParameters,
+                callback);
         }
 
         public void GetGameSessionDetailsByPodName(string podName
@@ -511,6 +534,13 @@ namespace AccelByte.Api
         public void GetGameSessionDetailsBySessionId(string sessionId
             , ResultCallback<SessionV2GameSession> callback)
         {
+            GetGameSessionDetailsBySessionId(sessionId, null, callback);
+        }
+
+        internal void GetGameSessionDetailsBySessionId(string sessionId
+            , OptionalParametersBase optionalParameters
+            , ResultCallback<SessionV2GameSession> callback)
+        {
             Report.GetFunctionLog(GetType().Name, logger: SharedMemory?.Logger);
 
             if (!ValidateAccelByteId(sessionId, Utils.AccelByteIdValidator.HypensRule.NoRule, Utils.AccelByteIdValidator.GetSessionIdInvalidMessage(sessionId), callback))
@@ -524,10 +554,10 @@ namespace AccelByte.Api
                 return;
             }
 
-            coroutineRunner.Run(
-                sessionApi.GetGameSessionDetailsBySessionId(
-                    sessionId,
-                    callback));
+            sessionApi.GetGameSessionDetailsBySessionIdInternal(
+                sessionId,
+                optionalParameters,
+                callback);
         }
 
         public void DeleteGameSession(string sessionId
@@ -575,11 +605,19 @@ namespace AccelByte.Api
                     request,
                     callback));
         }
-
-        public void InviteUserToGameSession(string sessionId, string userId
+        
+        public void InviteUserToGameSession(string sessionId, string userId, ResultCallback callback)
+        {
+            InviteUserToGameSession(sessionId, userId, null, callback);
+        }
+        
+        public void InviteUserToGameSession(
+            string sessionId
+            , string userId
+            , InviteUserToGameSessionOptionalParameters optionalParameters
             , ResultCallback callback)
         {
-            Report.GetFunctionLog(GetType().Name, logger: SharedMemory?.Logger);
+            Report.GetFunctionLog(GetType().Name, logger: optionalParameters?.Logger);
 
             if (!ValidateAccelByteId(sessionId, Utils.AccelByteIdValidator.HypensRule.NoRule, Utils.AccelByteIdValidator.GetSessionIdInvalidMessage(sessionId), callback))
             {
@@ -610,6 +648,7 @@ namespace AccelByte.Api
             sessionApi.InviteUserToGameSession(
                 sessionId,
                 userId,
+                optionalParameters,
                 inviteUserCallback);
         }
 
@@ -639,6 +678,14 @@ namespace AccelByte.Api
         public void JoinGameSession(string sessionId
             , ResultCallback<SessionV2GameSession> callback)
         {
+            JoinGameSession(sessionId, null, callback);
+        }
+
+        internal void JoinGameSession(
+            string sessionId
+            , JoinGameSessionOptionalParameters optionalParameters
+            , ResultCallback<SessionV2GameSession> callback)
+        {
             Report.GetFunctionLog(GetType().Name, logger: SharedMemory?.Logger);
 
             if (!ValidateAccelByteId(sessionId, Utils.AccelByteIdValidator.HypensRule.NoRule, Utils.AccelByteIdValidator.GetSessionIdInvalidMessage(sessionId), callback))
@@ -652,20 +699,20 @@ namespace AccelByte.Api
                 return;
             }
 
-            coroutineRunner.Run(
-                sessionApi.JoinGameSession(
-                    sessionId,
-                    cb =>
+            sessionApi.JoinGameSession(
+                sessionId,
+                optionalParameters,
+                cb =>
+                {
+                    if (!cb.IsError && cb.Value != null)
                     {
-                        if (!cb.IsError && cb.Value != null)
-                        {
-                            SharedMemory.PastSessionRecordManager?
-                                .InsertPastSessionId(session.UserId, cb.Value.id);
-                            SharedMemory?.MessagingSystem?.SendMessage(AccelByteMessagingTopic.OnJoinedGameSessionNotification, session.UserId);
-                            SendPredefinedEvent(cb, PredefinedAnalyticsMode.GameSessionJoin);
-                        }
-                        HandleCallback(cb, callback);
-                    }));
+                        SharedMemory.PastSessionRecordManager?
+                            .InsertPastSessionId(session.UserId, cb.Value.id);
+                        SharedMemory?.MessagingSystem?.SendMessage(AccelByteMessagingTopic.OnJoinedGameSessionNotification, session.UserId);
+                        SendPredefinedEvent(cb, PredefinedAnalyticsMode.GameSessionJoin);
+                    }
+                    HandleCallback(cb, callback);
+                });
         }
 
         public void LeaveGameSession(string sessionId
@@ -700,6 +747,13 @@ namespace AccelByte.Api
         public void RejectGameSessionInvitation(string sessionId
             , ResultCallback callback)
         {
+            RejectGameSessionInvitation(sessionId, null, callback);
+        }
+        
+        internal void RejectGameSessionInvitation(string sessionId
+            , RejectSessionInvitationOptionalParameters optionalParameters
+            , ResultCallback callback)
+        {
             Report.GetFunctionLog(GetType().Name, logger: SharedMemory?.Logger);
 
             if (!ValidateAccelByteId(sessionId, Utils.AccelByteIdValidator.HypensRule.NoRule, Utils.AccelByteIdValidator.GetSessionIdInvalidMessage(sessionId), callback))
@@ -713,10 +767,18 @@ namespace AccelByte.Api
                 return;
             }
 
-            coroutineRunner.Run(
-                sessionApi.RejectGameSessionInvitation(
+            callback += result =>
+            {
+                if (!result.IsError)
+                {
+                    SharedMemory?.MessagingSystem?.SendMessage(AccelByteMessagingTopic.RejectGameSessionNotification, sessionId, isImmediate: true);
+                }
+            };
+
+            sessionApi.RejectGameSessionInvitation(
                     sessionId,
-                    callback));
+                    optionalParameters,
+                    callback);
         }
 
         public void GetUserGameSessions(SessionV2StatusFilter? statusFilter, SessionV2AttributeOrderBy? orderBy,
@@ -823,7 +885,7 @@ namespace AccelByte.Api
                 sessionApi.PromoteUserToGameSessionLeader(sessionId, leaderId, callback));
         }
 
-        private void OnTicketPollMatchFound(string sessionId)
+        internal void OnTicketPollMatchFound(string sessionId)
         {
             coroutineRunner.Run(OnTicketPollMatchFoundAsync(sessionId));
         }
@@ -841,7 +903,7 @@ namespace AccelByte.Api
             bool shouldContinuePolling = true;
             while (shouldContinuePolling && !cts.IsCancellationRequested)
             {
-                sessionApi.GetGameSessionDetailsBySessionIdInternal(sessionId, result =>
+                sessionApi.GetGameSessionDetailsBySessionIdInternal(sessionId, null, result =>
                 {
                     if (result.IsError || cts.IsCancellationRequested)
                     {
@@ -1174,6 +1236,33 @@ namespace AccelByte.Api
             }
 
             sessionApi.RemovePlayerAttributes(callback);
+        }
+
+        /// <summary>
+        /// Get recent players
+        /// </summary>
+        /// <param name="callback">Returns SessionV2RecentPlayers via callback when completed</param>
+        public void GetRecentPlayers(ResultCallback<SessionV2RecentPlayers> callback)
+        {
+            GetRecentPlayers(null, callback);
+        }
+
+        /// <summary>
+        /// Get recent players
+        /// </summary>
+        /// <param name="optionalParameters">Optional parameters including limit (default: 20, max: 200)</param>
+        /// <param name="callback">Returns SessionV2RecentPlayers via callback when completed</param>
+        public void GetRecentPlayers(GetRecentPlayersOptionalParameters optionalParameters, ResultCallback<SessionV2RecentPlayers> callback)
+        {
+            Report.GetFunctionLog(GetType().Name, logger: SharedMemory?.Logger);
+
+            if (!session.IsValid())
+            {
+                callback?.TryError(ErrorCode.IsNotLoggedIn);
+                return;
+            }
+
+            sessionApi.GetRecentPlayers(optionalParameters, callback);
         }
 #endregion
     }

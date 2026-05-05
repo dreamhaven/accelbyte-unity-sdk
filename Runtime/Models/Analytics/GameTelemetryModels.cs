@@ -39,6 +39,8 @@ namespace AccelByte.Models
             private set;
         }
 
+        internal OptionalParametersBase TelemetryAdditionalParameters;
+
         public TelemetryBody()
         {
             clientTimestamp = DateTime.UtcNow;
@@ -53,6 +55,11 @@ namespace AccelByte.Models
             Payload = telemetryEvent.Payload;
             FlightId = AccelByteSDK.FlightId;
             DeviceType = GameCommonInfo.PlatformName;
+        }
+
+        internal void SetOptionalParameters(OptionalParametersBase optionalParameters)
+        {
+            TelemetryAdditionalParameters = optionalParameters;
         }
 
         internal void SetTimeReference(TimeSpan timeReference)

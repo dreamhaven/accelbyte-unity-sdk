@@ -19,6 +19,7 @@ using UnityEngine;
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("com.accelbyte.UnitySDKGoogleCore")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("com.accelbyte.NintendoSDK")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("AccelByte.Networking")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("AccelByte.TestExtension")]
 
 namespace AccelByte.Core
 {
@@ -84,9 +85,13 @@ namespace AccelByte.Core
             ExecuteBootstraps();
 
 #if UNITY_EDITOR
+            // Unsubscribe first to prevent duplicates when domain reload is disabled
+            UnityEditor.EditorApplication.playModeStateChanged -= EditorApplicationPlayyModeStateChanged;
             UnityEditor.EditorApplication.playModeStateChanged += EditorApplicationPlayyModeStateChanged;
 #endif
 #if !UNITY_SWITCH
+            // Unsubscribe first to prevent duplicates when domain reload is disabled
+            Application.quitting -= ApplicationQuitting;
             Application.quitting += ApplicationQuitting;
 #endif
         }

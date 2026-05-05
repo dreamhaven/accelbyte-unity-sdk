@@ -20,7 +20,14 @@ namespace AccelByte.Core
         private uint pingRetry;
 
         private static Dictionary<int, List<CalculateLatencyTask>> portQueue;
-        
+
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetPortQueue()
+        {
+            portQueue?.Clear();
+            portQueue = null;
+        }
+
         public DefaultLatencyCalculator(int timeOutSeconds = 10, uint pingRetry = 6)
         {
             if (portQueue == null)
@@ -32,7 +39,7 @@ namespace AccelByte.Core
             this.pingRetry = pingRetry;
         }
         
-        public AccelByteResult<int, Error> CalculateLatency(string url, int port)
+        public AccelByteResult<int, Error> CalculateLatency(string url, int port, IDebugger debugger)
         {
             var result = new AccelByteResult<int, Error>();
             var newTask = new CalculateLatencyTask() { Port = port, Url = url, TaskResult = result };
@@ -49,14 +56,14 @@ namespace AccelByte.Core
                 portQueue[port].Add(newTask);
                 if (newPort)
                 {
-                    StartPortQueueController(port);
+                    StartPortQueueController(port, debugger);
                 }
             }
 
             return result;
         }
 
-        private async void StartPortQueueController(int port)
+        private async void StartPortQueueController(int port, IDebugger debugger)
         {
             bool hasNextTask = false;
             do
@@ -69,12 +76,18 @@ namespace AccelByte.Core
                 }
 
 #if !UNITY_WEBGL || UNITY_EDITOR
-                var optionalParameters = new Utils.Networking.UdpPingOptionalParameters();
+                var optionalParameters = new Utils.Networking.UdpPingOptionalParameters()
+                {
+                    Logger = debugger
+                };
                 optionalParameters.InTimeOutInMs = (uint)timeOutSeconds * 1000;
                 optionalParameters.MaxRetry = pingRetry;
                 AccelByteResult<int, Error> pingResult = AccelByte.Utils.Networking.UdpPing(nextTask.Url, (uint) nextTask.Port, optionalParameters);
 #else
-                var optionalParameters = new Utils.Networking.HttpPingOptionalParameters();
+                var optionalParameters = new Utils.Networking.HttpPingOptionalParameters()
+                {
+                    Logger = debugger
+                };
                 optionalParameters.InTimeOutInMs = (uint)timeOutSeconds * 1000;
                 optionalParameters.MaxRetry = pingRetry;
                 AccelByteResult<int, Error> pingResult = AccelByte.Utils.Networking.HttpPing(nextTask.Url, optionalParameters);

@@ -209,7 +209,7 @@ namespace AccelByte.Models
     }
     
     [Preserve]
-    public class GetUserInventoryAllItemsOptionalParameters
+    public class GetUserInventoryAllItemsOptionalParameters : OptionalParametersBase
     {
         /// <summary>
         /// Optional parameter to get the result sortedBy 
@@ -323,6 +323,7 @@ namespace AccelByte.Models
     [DataContract, Preserve]
     public class MoveUserItemResponseData
     {
+        [DataMember(Name = "id")] public string Id;
         [DataMember(Name = "qty")] public int Quantity;
         [DataMember(Name = "slotId")] public string SlotId;
         [DataMember(Name = "sourceItemId")] public string SourceItemId;
@@ -383,7 +384,7 @@ namespace AccelByte.Models
     /// <summary>
     /// Optional parameters for ConsumeUserInventoryItem. Can be null.
     /// </summary>
-    public class ConsumeUserInventoryItemOptionalParameters
+    public class ConsumeUserInventoryItemOptionalParameters : OptionalParametersBase
     {
         /// <summary>
         /// Only available when item type is OPTIONBOX, values should be item ID.
@@ -545,7 +546,7 @@ namespace AccelByte.Models
     /// <summary>
     /// Optional parameters for SaveUserInventoryItemToInventory endpoint. Can be null.
     /// </summary>
-    public class SaveUserInventoryItemToInventoryOptionalParameters
+    public class SaveUserInventoryItemToInventoryOptionalParameters : OptionalParametersBase
     {
         /// <summary>
         /// Custom metadata for the item.
@@ -612,7 +613,7 @@ namespace AccelByte.Models
     /// <summary>
     /// Optional parameters for CreateInventoryConfiguration. Can be null.
     /// </summary>
-    public class CreateInventoryConfigurationOptionalParameters
+    public class CreateInventoryConfigurationOptionalParameters : OptionalParametersBase
     {
         /// <summary>
         /// Plain text description for the inventory configuration.
@@ -695,7 +696,7 @@ namespace AccelByte.Models
     }
 
     [Preserve]
-    public class SaveUserInventoryItemOptionalParameters
+    public class SaveUserInventoryItemOptionalParameters : OptionalParametersBase
     {
         /// <summary>
         /// Optional parameter to specify item with tags

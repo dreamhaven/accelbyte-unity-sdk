@@ -40,6 +40,11 @@ namespace AccelByte.Server
         public event ResultCallback<MatchmakingV2BackfillProposalNotification> MatchmakingV2BackfillProposalReceived;
 
         /// <summary>
+        /// Event triggered when the secret is being enabled on the game session template
+        /// </summary>
+        public event ResultCallback<SessionSecretUpdateNotification> SessionServerSecretReceived;
+
+        /// <summary>
         /// Event triggered when game session ended.
         /// </summary>
         public event ResultCallback<SessionEndedNotification> GameSessionV2Ended;
@@ -112,17 +117,19 @@ namespace AccelByte.Server
 
         /// <summary>
         /// Connect to DSHub
+        /// Note: ServerId is the DsId value that passed to the dedicated server with "-dsid" argument
+        ///         Which has "ds_<uuid-v4>" format
         /// </summary>
-        /// <param name="serverName">this server's name</param>
-        public void Connect(string serverName)
+        /// <param name="serverId">this server's id</param>
+        public void Connect(string serverId)
         {
             Report.GetFunctionLog(GetType().Name);
 
-            podName = serverName;
+            podName = serverId;
 
             try
             {
-                serverDSHubWebsocketApi.Connect(serverName, result =>
+                serverDSHubWebsocketApi.Connect(serverId, result =>
                 {
                     if (result.IsError)
                     {
@@ -188,6 +195,12 @@ namespace AccelByte.Server
 
             switch (notification.topic)
             {
+                case DsHubNotificationTopic.SessionServerSecret:
+                    var serverSecret = JsonConvert.DeserializeObject<ServerDSHubWebsocketNotification<SessionSecretUpdateNotification>>(
+                            message);
+                    serverDSHubWebsocketApi.HandleNotification(serverSecret.payload
+                        , SessionServerSecretReceived);
+                    break;
                 case DsHubNotificationTopic.serverClaimed:
                     var serverClaimedNotification =
                         JsonConvert.DeserializeObject<ServerDSHubWebsocketNotification<ServerClaimedNotification>>(

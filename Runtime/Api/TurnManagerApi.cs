@@ -1,4 +1,4 @@
-// Copyright (c) 2022 - 2024 AccelByte Inc. All Rights Reserved.
+// Copyright (c) 2022 - 2025 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
@@ -20,13 +20,13 @@ namespace AccelByte.Api
 
         public IEnumerator GetTurnServers(ResultCallback<TurnServerList> callback)
         {
-            RequestGetTurnServers(callback);
+            RequestGetTurnServers(null, callback);
             yield break;
         }
 
-        internal void RequestGetTurnServers(ResultCallback<TurnServerList> callback)
+        internal void RequestGetTurnServers(RequestGetTurnServersOptionalParam optionalParameters, ResultCallback<TurnServerList> callback)
         {
-            Report.GetFunctionLog(GetType().Name);
+            Report.GetFunctionLog(GetType().Name, logger: optionalParameters?.Logger);
 
             var error = ApiHelperUtils.CheckForNullOrEmpty(AuthToken);
             if (error != null)
@@ -42,7 +42,10 @@ namespace AccelByte.Api
                 .Accepts(MediaType.ApplicationJson)
                 .GetResult();
 
-            HttpOperator.SendRequest(request, response =>
+            HttpOperator.SendRequest(
+            AdditionalHttpParameters.CreateFromOptionalParameters(optionalParameters)
+            , request
+            , response =>
             {
                 var result = response.TryParseJson<TurnServerList>();
                 callback?.Try(result);
@@ -54,13 +57,14 @@ namespace AccelByte.Api
             , int port
             , ResultCallback<TurnServerCredential> callback)
         {
-            RequestGetTurnServerCredential(region, ip, port,callback);
+            RequestGetTurnServerCredential(region, ip, port, optionalParameters: null, callback);
             yield break;
         }
 
         internal void RequestGetTurnServerCredential(string region
             , string ip
             , int port
+            , RequestGetTurnServerCredentialOptionalParameters optionalParameters
             , ResultCallback<TurnServerCredential> callback)
         {
             Report.GetFunctionLog(GetType().Name);
@@ -88,7 +92,8 @@ namespace AccelByte.Api
                 .Accepts(MediaType.ApplicationJson)
                 .GetResult();
 
-            HttpOperator.SendRequest(request, response =>
+            var additionalHttpParameters = AdditionalHttpParameters.CreateFromOptionalParameters(optionalParameters);
+            HttpOperator.SendRequest(additionalHttpParameters, request, response =>
             {
                 var result = response.TryParseJson<TurnServerCredential>();
                 callback?.Try(result);

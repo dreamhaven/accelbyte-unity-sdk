@@ -163,7 +163,7 @@ namespace AccelByte.Utils
                     return null;
                 }
 
-                var key = line.Substring(0, splitIndex).Trim(' ');
+                var key = line.Substring(0, splitIndex).Trim(' ').ToLower();
                 var value = line.Substring(splitIndex + 2).Trim(' ');
 
                 if (string.IsNullOrEmpty(key))
@@ -187,12 +187,12 @@ namespace AccelByte.Utils
         {
             payload = new T();
             var fieldInfos = typeof(T).GetFields().Where(x => x.IsDefined(typeof(DataMemberAttribute), false));
-
+            
             foreach (var fieldInfo in fieldInfos)
             {
                 string fieldValue;
 
-                if (!fields.TryGetValue(fieldInfo.Name, out fieldValue))
+                if (!fields.TryGetValue(fieldInfo.Name.ToLower(), out fieldValue))
                 {
                     continue;
                 }

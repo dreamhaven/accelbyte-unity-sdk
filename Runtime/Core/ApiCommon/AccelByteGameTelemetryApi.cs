@@ -11,9 +11,9 @@ namespace AccelByte.Core
     {
         public static void SendProtectedEventV1(List<TelemetryBody> telemetryBodies, HttpOperator httpOperator, string gameTelemetryServerUrl, string authToken, ResultCallback callback)
         {
-            if (telemetryBodies == null)
+            if (telemetryBodies == null || telemetryBodies.Count == 0)
             {
-                callback?.TryError(ErrorCode.InvalidArgument, errorMessage: $"{nameof(telemetryBodies)} is null.");
+                callback?.TryError(ErrorCode.InvalidArgument, errorMessage: $"{nameof(telemetryBodies)} is null or empty.");
                 return;
             }
             
@@ -27,7 +27,17 @@ namespace AccelByte.Core
                 .Accepts(MediaType.ApplicationJson)
                 .GetResult();
 
-            httpOperator.SendRequest(request, response =>
+            var telemetryBodyWithAdditionalParameters = telemetryBodies.Find(telemetryBody => telemetryBody.TelemetryAdditionalParameters != null);
+
+            var additionalHttpParameters = new AdditionalHttpParameters();
+            if (telemetryBodyWithAdditionalParameters != null)
+            {
+                additionalHttpParameters =
+                    AdditionalHttpParameters.CreateFromOptionalParameters(telemetryBodyWithAdditionalParameters
+                        .TelemetryAdditionalParameters);
+            }
+
+            httpOperator.SendRequest(additionalHttpParameters, request, response =>
             {
                 var result = response.TryParse();
                 callback?.Try(result);

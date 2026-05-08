@@ -19,7 +19,9 @@ namespace AccelByte.Api
         public readonly string UniqueId;
         internal readonly bool IsGenerated;
 
-#if UNITY_SWITCH && !UNITY_EDITOR
+// Start Blackrazor Edit
+#if (UNITY_SWITCH || UNITY_SWITCH2)&& !UNITY_EDITOR
+// End Blackrazor Edit
         public static readonly string DefaultGeneratedIdCacheFileDir = "AccelByte/";
 #else
         public static string DefaultGeneratedIdCacheFileDir = $"{GameCommonInfo.PersistentPath}/AccelByte/";
@@ -263,7 +265,9 @@ namespace AccelByte.Api
         public static string[] GetMacAddress()
         {
             string[] macAddressArray = null;
-#if (!UNITY_SWITCH && !UNITY_WEBGL && !UNITY_IOS && !UNITY_ANDROID) || UNITY_EDITOR
+// Start Blackrazor Edit
+#if (!UNITY_SWITCH && !UNITY_SWITCH2 && !UNITY_WEBGL && !UNITY_IOS && !UNITY_ANDROID) || UNITY_EDITOR
+// End Blackrazor Edit
             NetworkInterface[] networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
 
             macAddressArray = new string[] { };

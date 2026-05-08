@@ -11,7 +11,9 @@ namespace AccelByte.Core
 {
     internal class AccelByteDataStorageBinaryFile : IAccelByteDataStorage
     {
-#if UNITY_SWITCH && !UNITY_EDITOR
+// Start Blackrazor Edit
+#if (UNITY_SWITCH || UNITY_SWITCH2) && !UNITY_EDITOR
+// End Blackrazor Edit
         internal static readonly string RootPath = "AccelByte/";
 #else
         internal static readonly string RootPath = $"{GameCommonInfo.PersistentPath}/AccelByte/{GameCommonInfo.ProductName}";

@@ -33,7 +33,9 @@ namespace AccelByte.Core
     using PlatformMain = PS5Main;
 #elif !UNITY_EDITOR && UNITY_GAMECORE
     using PlatformMain = GameCoreMain;
-#elif !UNITY_EDITOR && UNITY_SWITCH
+// Start Blackrazor Edit
+#elif !UNITY_EDITOR && (UNITY_SWITCH || UNITY_SWITCH2)
+// End Blackrazor Edit
     using PlatformMain = SwitchMain;
 #elif UNITY_EDITOR
     using PlatformMain = EditorMain;
@@ -89,7 +91,9 @@ namespace AccelByte.Core
             UnityEditor.EditorApplication.playModeStateChanged -= EditorApplicationPlayyModeStateChanged;
             UnityEditor.EditorApplication.playModeStateChanged += EditorApplicationPlayyModeStateChanged;
 #endif
-#if !UNITY_SWITCH
+// Start Blackrazor Edit
+#if !(UNITY_SWITCH || UNITY_SWITCH2)
+// End Blackrazor Edit
             // Unsubscribe first to prevent duplicates when domain reload is disabled
             Application.quitting -= ApplicationQuitting;
             Application.quitting += ApplicationQuitting;

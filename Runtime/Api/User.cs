@@ -29,7 +29,9 @@ namespace AccelByte.Api
         internal const string AuthorizationCodeEnvironmentVariable = "JUSTICE_AUTHORIZATION_CODE";
         public const int MaxNumOfBulkGetUserByOtherPlatformUserId = 100;
 
-#if UNITY_SWITCH && !UNITY_EDITOR
+// Start Blackrazor Edit
+#if (UNITY_SWITCH || UNITY_SWITCH2) && !UNITY_EDITOR
+// End Blackrazor Edit
         internal static readonly string DefaultPlatformCacheDirectory = "AccelByte/PlatformLoginCache/";
 #else
         internal static readonly string DefaultPlatformCacheDirectory = $"{GameCommonInfo.PersistentPath}/AccelByte/PlatformLoginCache/{GameCommonInfo.ProductName}";

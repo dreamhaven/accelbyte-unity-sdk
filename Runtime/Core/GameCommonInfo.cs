@@ -15,7 +15,9 @@ namespace AccelByte.Core
         public static string ProductName = Application.productName;
         public static string PlatformName = Application.platform.ToString();
         public static string DeviceType = SystemInfo.deviceType.ToString();
-#if !UNITY_SWITCH || UNITY_EDITOR
+// Start Blackrazor Edit
+#if !(UNITY_SWITCH || UNITY_SWITCH2) || UNITY_EDITOR
+// End Blackrazor Edit
         private static string unityPersistentPath = Application.persistentDataPath;
 
         public static string PersistentPath

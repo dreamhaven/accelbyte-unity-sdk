@@ -9,7 +9,9 @@ namespace AccelByte.Core
         public IFileStream CreateFileStream()
         {
             AccelByteDebug.LogVerbose("Create AccelByte Default FileStream");
-#if UNITY_SWITCH && !UNITY_EDITOR
+// Start Blackrazor Edit
+#if (UNITY_SWITCH || UNITY_SWITCH2) && !UNITY_EDITOR
+// End Blackrazor Edit
             var retval = new NullFileStream();
 #elif UNITY_WEBGL && !UNITY_EDITOR
             var retval = new PlayerPrefsFileStream();
